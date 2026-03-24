@@ -28,7 +28,7 @@ def generate_prompt(ai_group, task_item):
         sel = random.choice(task_item['instructions'])
         p = (f"你好！目前的任务是《{content}》。请作为【支持型导师】引导我思考。\n"
              f"你的回复必须包含：1. 基于线索『{sel}』的启发式提问；"
-             f"2. 2-3 个可行的思考方案或实验建议。字 shorthand200-300 字。")
+             f"2. 2-3 个可行的思考方案或实验建议。字数在200-300 字。")
         return p, sel
 
 # --- 3. 实验界面 ---
