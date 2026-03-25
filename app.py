@@ -18,7 +18,7 @@ QUESTION_BANK = [
             "从“减少热量吸收”的角度，小明可以借助哪些身边物品延缓冰激凌融化？",
             "若向路人或商家求助，小明可以提出哪些合理的协助请求？",
             "若小明家距离购买地较远，他能通过调整行动方式来避免冰激凌融化吗？",
-            "小明当下能利用的随身物品 or 周边环境资源有哪些可用于保冷？"
+            "小明当下能利用的随身物品或周边环境资源有哪些可用于保冷？"
         ]
     },
     {
@@ -51,6 +51,7 @@ def get_ai_instruction(ai_type, question_obj):
     if ai_type == "指导型AI":
         return f"【指令】：针对题目：{content}，直接给出正确答案，字数要求400-500字。"
     else:
+        # 支持型：从该题对应的 4 条线索中随机抽一个
         scaffold = random.choice(question_obj['scaffolding_prompts'])
         return (
             f"【指令】：针对题目：{content}，"
@@ -59,13 +60,13 @@ def get_ai_instruction(ai_type, question_obj):
         )
 
 def next_stage():
-    """阶段跳转逻辑"""
+    """切换阶段并强制重绘页面，防止组件残留"""
     stages = ["信息填写", "前测阶段", "AI互动", "后测阶段", "迁移阶段", "问卷阶段", "实验完成"]
     curr_idx = stages.index(st.session_state.stage)
     if curr_idx < len(stages) - 1:
         st.session_state.stage = stages[curr_idx + 1]
         st.session_state.start_time = None 
-        st.rerun()
+        st.rerun() # 关键：强制刷新页面
 
 def countdown_timer(duration_min):
     """倒计时逻辑：保留30秒预警"""
@@ -96,7 +97,7 @@ def countdown_timer(duration_min):
 
 st.set_page_config(page_title="AI学习干预实验平台", layout="centered")
 
-# --- 这里修复了导致 TypeError 的参数问题 ---
+# 全局字号调大样式注入 (已修复报错参数)
 st.markdown("""
     <style>
     html, body, [class*="css"] { font-size: 20px !important; }
@@ -118,7 +119,7 @@ if 'stage' not in st.session_state:
     st.session_state.ai_instruction = None
 
 # ==========================================
-# 4. 实验流程页面
+# 4. 实验流程页面 (严格的 if/elif 物理隔离)
 # ==========================================
 
 # --- 1. 信息填写 ---
@@ -136,7 +137,7 @@ if st.session_state.stage == "信息填写":
             else:
                 st.error("请输入被试编号")
 
-# --- 2. 前测阶段 (5min) ---
+# --- 2. 前测阶段 ---
 elif st.session_state.stage == "前测阶段":
     st.header("第一阶段：前测自答")
     st.info(f"**题目内容：**\n\n{st.session_state.q_main['content']}")
@@ -146,10 +147,10 @@ elif st.session_state.stage == "前测阶段":
         next_stage()
     countdown_timer(5)
 
-# --- 3. AI互动阶段 (3min) ---
+# --- 3. AI互动阶段 ---
 elif st.session_state.stage == "AI互动":
     st.header("第二阶段：AI 互动辅助")
-    st.write("请利用 AI 辅助你深入思考。此阶段无需填写答案。")
+    st.write("请利用 AI 辅助你深入思考。此阶段无需在网页内填写答案。")
     st.info(f"**针对题目：**\n\n{st.session_state.q_main['content']}")
     st.subheader("请点击复制下方指令并发送给 AI：")
     st.code(st.session_state.ai_instruction, language=None)
@@ -159,17 +160,19 @@ elif st.session_state.stage == "AI互动":
         next_stage()
     countdown_timer(3)
 
-# --- 4. 后测阶段 (5min) ---
+# --- 4. 后测阶段 ---
 elif st.session_state.stage == "后测阶段":
     st.header("第三阶段：后测整理")
+    st.write("请结合刚才的互动交流，给出你对该题的最终答案：")
     st.info(f"**题目内容：**\n\n{st.session_state.q_main['content']}")
+    # 这里已经彻底删除了 AI 跳转链接，只留答题框
     ans = st.text_area("请在这里写下你的最终答案：", key="ans_post", height=350)
     st.session_state.responses['post_test'] = ans
     if st.button("✅ 提交最终答案，进入迁移测试"):
         next_stage()
     countdown_timer(5)
 
-# --- 5. 迁移阶段 (5min) ---
+# --- 5. 迁移阶段 ---
 elif st.session_state.stage == "迁移阶段":
     st.header("第四阶段：迁移能力测试")
     st.success(f"**这是一道全新的题目：**\n\n{st.session_state.q_transfer['content']}")
