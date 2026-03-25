@@ -4,16 +4,11 @@ import json
 import time
 import base64
 
-# --- 1. 样式与标题控制 ---
+# --- 1. 样式与标题 (优化一行显示) ---
 st.set_page_config(page_title="AI 学习干预实验平台", layout="centered")
 
-# 使用 Markdown 自定义标题字号，防止换行
 st.markdown("""
-    <h1 style='text-align: center; font-size: 42px; white-space: nowrap;'>🎓 AI 学习干预实验平台</h1>
-    """, unsafe_allow_html=True)
-
-# 调大正文字号
-st.markdown("""
+    <h1 style='text-align: center; font-size: 38px; white-space: nowrap;'>🎓 AI 学习干预实验平台</h1>
     <style>
     html, body, [class*="css"] { font-size: 24px !important; }
     .stTextArea textarea { font-size: 22px !important; }
@@ -77,7 +72,7 @@ if st.session_state.step == 1:
                 else:
                     st.error("题库中该组别题目不足。")
             except:
-                st.error("初始化失败，请确保 question_bank.json 文件已上传至 GitHub。")
+                st.error("初始化失败，请确保 question_bank.json 已上传。")
         else:
             st.warning("请输入编号。")
 
@@ -118,4 +113,18 @@ elif st.session_state.step == 4:
         next_step(5)
 
 # 阶段 5：迁移
-elif st.session_
+elif st.session_state.step == 5:
+    st.header("🚀 阶段 4：迁移测试")
+    st.success("🌟 独立解决新题：")
+    st.info(f"题目：{st.session_state.trans_i['content']}")
+    ans = st.text_area("请输入回答：", height=400, key="s5_ans")
+    if st.button("✅ 完成实验", key="s5_btn") or smart_timer(300, "t4"):
+        st.session_state.data['trans_ans'] = ans
+        next_step(6)
+
+# 阶段 6：回收
+elif st.session_state.step == 6:
+    st.success("🎉 全部实验已结束！")
+    b64 = base64.b64encode(json.dumps(st.session_state.data, ensure_ascii=False).encode()).decode()
+    st.write("请复制下方代码发还主试：")
+    st.code(b64)
