@@ -39,7 +39,7 @@ def smart_timer(total_seconds, key):
     remaining = int(st.session_state[timer_key] - time.time())
     if remaining <= 0: return True
     
-    if remaining <= 30:
+    if remaining <= 5:
         st.markdown(f'<p class="timer-warning">⚠️ 警告：本环节即将结束！剩余 {remaining} 秒</p>', unsafe_allow_html=True)
     
     time.sleep(1)
@@ -64,6 +64,7 @@ if st.session_state.step == 1:
                 # 读取题库
                 with open("question_bank.json", "r", encoding="utf-8") as f:
                     bank = json.load(f)
+                    next_step(1)
                 
                 # 根据选中的学段（取第一个字符 "1" 或 "2"）去抽题
                 age_key = age[0] 
@@ -93,7 +94,7 @@ elif st.session_state.step == 2:
     st.info(f"题目：{st.session_state.main_i['content']}")
     ans = st.text_area("请在这里输入你的回答：", height=400, key="s2_ans")
     
-    if st.button("✅ 提交并进入下一步", key="s2_btn") or smart_timer(300, "t1"):
+    if st.button("✅ 提交并进入下一步", key="s2_btn") or smart_timer(10, "t1"):
         st.session_state.data['pre_ans'] = ans
         next_step(3)
 
@@ -106,7 +107,7 @@ elif st.session_state.step == 3:
     # 动态生成指令
     group_type = st.session_state.data['group']
     if group_type == "指导型":
-        prompt = f"针对题目《{st.session_state.main_i['content']}》直接给出标准答案。严禁提问。"
+        prompt = f"针对题目《{st.session_state.main_i['content']}》直接给出标准答案。"
         sel_ins = "N/A"
     else:
         sel_ins = random.choice(st.session_state.main_i['instructions'])
@@ -117,7 +118,7 @@ elif st.session_state.step == 3:
     st.code(prompt)
     st.link_button("👉 点击打开【豆包 AI】", "https://www.doubao.com")
     
-    if st.button("✅ 互动结束，进入下一阶段", key="s3_btn") or smart_timer(180, "t2"):
+    if st.button("✅ 互动结束，进入下一阶段", key="s3_btn") or smart_timer(10, "t2"):
         next_step(4)
 
 # 【阶段 4：后测】
@@ -126,7 +127,7 @@ elif st.session_state.step == 4:
     st.info(f"题目：{st.session_state.main_i['content']}")
     ans = st.text_area("请再次回答：", height=400, key="s4_ans")
     
-    if st.button("✅ 提交并进入下一步", key="s4_btn") or smart_timer(300, "t3"):
+    if st.button("✅ 提交并进入下一步", key="s4_btn") or smart_timer(10, "t3"):
         st.session_state.data['post_ans'] = ans
         next_step(5)
 
@@ -137,7 +138,7 @@ elif st.session_state.step == 5:
     st.info(f"题目：{st.session_state.trans_i['content']}")
     ans = st.text_area("请在此输入回答：", height=400, key="s5_ans")
     
-    if st.button("✅ 完成实验", key="s5_btn") or smart_timer(300, "t4"):
+    if st.button("✅ 完成实验", key="s5_btn") or smart_timer(10, "t4"):
         st.session_state.data['trans_ans'] = ans
         next_step(6)
 
