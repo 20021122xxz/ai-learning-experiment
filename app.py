@@ -4,11 +4,14 @@ import json
 import time
 import base64
 
-# --- 1. 样式与标题 (优化一行显示) ---
+# --- 1. 样式与标题 (视觉平衡版) ---
 st.set_page_config(page_title="AI 学习干预实验平台", layout="centered")
 
+# 调整标题：字号 46px，加粗，增加底部边框增强分量感
 st.markdown("""
-    <h1 style='text-align: center; font-size: 38px; white-space: nowrap;'>🎓 AI 学习干预实验平台</h1>
+    <div style='text-align: center; border-bottom: 2px solid #f0f2f6; padding-bottom: 10px; margin-bottom: 25px;'>
+        <h1 style='font-size: 46px; white-space: nowrap; color: #31333F; margin: 0;'>🎓 AI 学习干预实验平台</h1>
+    </div>
     <style>
     html, body, [class*="css"] { font-size: 24px !important; }
     .stTextArea textarea { font-size: 22px !important; }
@@ -118,7 +121,7 @@ elif st.session_state.step == 5:
     st.success("🌟 独立解决新题：")
     st.info(f"题目：{st.session_state.trans_i['content']}")
     ans = st.text_area("请输入回答：", height=400, key="s5_ans")
-    if st.button("✅ 完成实验", key="s5_btn") or smart_timer(300, "t4"):
+    if st.button("✅ 完成实验") or smart_timer(300, "t4"):
         st.session_state.data['trans_ans'] = ans
         next_step(6)
 
