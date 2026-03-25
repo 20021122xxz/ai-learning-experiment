@@ -45,7 +45,7 @@ SURVEY_OPTIONS = ["非常不同意", "不同意", "一般", "同意", "非常同
 # ==========================================
 st.set_page_config(page_title="AI学习干预实验平台", layout="centered")
 
-# 大字号样式注入
+# 大字号样式
 st.markdown("""
     <style>
     html, body, [class*="css"] { font-size: 20px !important; }
@@ -53,8 +53,6 @@ st.markdown("""
     .stButton>button { font-size: 24px !important; height: 3em !important; width: 100% !important; background-color: #f0f2f6 !important; }
     [data-testid="stMetricValue"] { font-size: 40px !important; }
     .stMarkdown p { font-size: 22px !important; }
-    /* 强制调大警告框内的文字 */
-    .stAlert p { font-size: 24px !important; font-weight: bold !important; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -67,6 +65,7 @@ if 'stage' not in st.session_state:
     st.session_state.q_transfer = QUESTION_BANK[indices[1]]
     st.session_state.ai_instruction = ""
 
+# 阶段列表
 STAGES = ["信息填写", "前测阶段", "AI互动", "后测阶段", "迁移阶段", "问卷阶段", "实验完成"]
 
 def get_ai_instruction(ai_type, question_obj):
@@ -112,7 +111,6 @@ if curr_stage_name == "信息填写":
     u_id = st.text_input("被试编号")
     u_grade = st.selectbox("所在年级", ["小学四年级", "小学五年级", "小学六年级", "初中一年级", "初中二年级"])
     u_ai = st.selectbox("AI 分组类型", ["指导型AI", "支持型AI"])
-    st.divider()
     if st.button("下一步"):
         if u_id:
             st.session_state.user_info = {"id": u_id, "grade": u_grade, "ai_type": u_ai}
@@ -123,21 +121,18 @@ if curr_stage_name == "信息填写":
 # --- 2. 前测阶段 (5min) ---
 elif curr_stage_name == "前测阶段":
     st.header("第一阶段：前测自答")
-    st.info(f"**题目：** {st.session_state.q_main['content']}")
-    st.session_state.responses['pre_test'] = st.text_area("请写下你的思考：", key="ans_pre", height=250)
-    st.divider()
+    st.info(st.session_state.q_main['content'])
+    st.session_state.responses['pre_test'] = st.text_area("请写下思考：", key="ans_pre", height=250)
     if st.button("下一步"): next_stage()
     run_timer(5)
 
 # --- 3. AI互动阶段 (3min) ---
 elif curr_stage_name == "AI互动":
     st.header("第二阶段：AI 互动辅助")
-    
-    # 新增的指导语警告框
+
+# 新增的指导语警告框
     st.error("📢 重要提示：请用纸笔记录你认为的答案重点，并在倒计时结束之前返回实验页面。倒计时结束会强制继续下一个环节输入你整理过后的答案，且不可返回原页面。")
-    
-    st.info(f"**针对题目：** {st.session_state.q_main['content']}")
-    st.subheader("请复制指令发送给 AI：")
+
     st.code(st.session_state.ai_instruction, language=None)
     st.link_button("🚀 前往 豆包 AI", "https://www.doubao.com/")
     st.divider()
@@ -147,31 +142,29 @@ elif curr_stage_name == "AI互动":
 # --- 4. 后测阶段 (5min) ---
 elif curr_stage_name == "后测阶段":
     st.header("第三阶段：后测整理")
-    st.info(f"**题目内容：** {st.session_state.q_main['content']}")
+    st.info(st.session_state.q_main['content'])
     st.session_state.responses['post_test'] = st.text_area("请写下最终答案：", key="ans_post", height=350)
-    st.divider()
     if st.button("下一步"): next_stage()
     run_timer(5)
 
 # --- 5. 迁移阶段 (5min) ---
 elif curr_stage_name == "迁移阶段":
     st.header("第四阶段：迁移能力测试")
-    st.success(f"**新题目：** {st.session_state.q_transfer['content']}")
+    st.success(st.session_state.q_transfer['content'])
     st.session_state.responses['transfer_test'] = st.text_area("请独立作答：", key="ans_transfer", height=300)
-    st.divider()
     if st.button("下一步"): next_stage()
     run_timer(5)
 
 # --- 6. 问卷阶段 ---
 elif curr_stage_name == "问卷阶段":
     st.header("第五阶段：反馈问卷")
+    # 问卷因为组件多，必须用 form 包裹
     with st.form("survey_form"):
         results = {}
         for section in SURVEY_CORPUS:
             st.markdown(f"### 【{section['dim']}】")
             for q in section['qs']:
                 results[q] = st.select_slider(q, options=SURVEY_OPTIONS, value="一般")
-            st.divider()
         if st.form_submit_button("下一步"):
             st.session_state.responses['survey'] = results
             next_stage()
