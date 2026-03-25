@@ -64,7 +64,6 @@ if st.session_state.step == 1:
                 # 读取题库
                 with open("question_bank.json", "r", encoding="utf-8") as f:
                     bank = json.load(f)
-                    next_step(1)
                 
                 # 根据选中的学段（取第一个字符 "1" 或 "2"）去抽题
                 age_key = age[0] 
