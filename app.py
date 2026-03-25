@@ -46,63 +46,48 @@ SURVEY_OPTIONS = ["非常不同意", "不同意", "一般", "同意", "非常同
 # ==========================================
 
 def get_ai_instruction(ai_type, question_obj):
-    """生成指令：严格遵循你的字数要求描述"""
     content = question_obj['content']
     if ai_type == "指导型AI":
         return f"【指令】：针对题目：{content}，直接给出正确答案，字数要求400-500字。"
     else:
-        # 支持型：从该题对应的 4 条线索中随机抽一个
         scaffold = random.choice(question_obj['scaffolding_prompts'])
-        return (
-            f"【指令】：针对题目：{content}，"
-            f"请根据以下线索：“{scaffold}”，"
-            f"启发我思考并引导我找出正确答案，字数要求400-500字。"
-        )
+        return (f"【指令】：针对题目：{content}，请根据以下线索：“{scaffold}”，"
+                f"启发我思考并引导我找出正确答案，字数要求400-500字。")
 
 def next_stage():
-    """切换阶段并强制重绘页面，防止组件残留"""
     stages = ["信息填写", "前测阶段", "AI互动", "后测阶段", "迁移阶段", "问卷阶段", "实验完成"]
     curr_idx = stages.index(st.session_state.stage)
     if curr_idx < len(stages) - 1:
         st.session_state.stage = stages[curr_idx + 1]
         st.session_state.start_time = None 
-        st.rerun() # 关键：强制刷新页面
+        st.rerun()
 
 def countdown_timer(duration_min):
-    """倒计时逻辑：保留30秒预警"""
     total_sec = duration_min * 60
     if st.session_state.start_time is None:
         st.session_state.start_time = time.time()
-    
     elapsed = time.time() - st.session_state.start_time
     remaining = max(0, int(total_sec - elapsed))
-    
     st.sidebar.title("⏱️ 实验计时")
     st.sidebar.metric("剩余时间", f"{remaining // 60:02d}:{remaining % 60:02d}")
-    
     if 0 < remaining <= 30:
-        st.warning(f"⚠️ 注意：还剩 {remaining} 秒，系统即将自动保存并跳转！")
-    
+        st.warning(f"⚠️ 注意：还剩 {remaining} 秒，系统即将自动跳转！")
     if remaining <= 0:
-        st.error("时间到，系统正在强制保存并跳转...")
-        time.sleep(1)
         next_stage()
-    
     time.sleep(1)
     st.rerun()
 
 # ==========================================
-# 3. 初始化与样式注入
+# 3. 初始化与样式
 # ==========================================
 
 st.set_page_config(page_title="AI学习干预实验平台", layout="centered")
 
-# 全局字号调大样式注入 (已修复报错参数)
 st.markdown("""
     <style>
     html, body, [class*="css"] { font-size: 20px !important; }
     textarea, input { font-size: 22px !important; line-height: 1.5 !important; }
-    .stButton>button { font-size: 22px !important; height: 3em !important; width: 100% !important; }
+    .stButton>button { font-size: 24px !important; height: 3em !important; width: 100% !important; background-color: #f0f2f6; border-radius: 10px; }
     [data-testid="stMetricValue"] { font-size: 40px !important; }
     .stMarkdown p { font-size: 22px !important; }
     </style>
@@ -119,17 +104,21 @@ if 'stage' not in st.session_state:
     st.session_state.ai_instruction = None
 
 # ==========================================
-# 4. 实验流程页面 (严格的 if/elif 物理隔离)
+# 4. 实验页面流程
 # ==========================================
 
-# --- 1. 信息填写 ---
-if st.session_state.stage == "信息填写":
-    st.title("🧪 AI学习干预实验平台")
-    with st.form("info_form"):
+# 页面容器
+container = st.container()
+
+with container:
+    # --- 阶段 1：信息填写 ---
+    if st.session_state.stage == "信息填写":
+        st.title("🧪 AI学习干预实验平台")
         u_id = st.text_input("被试编号")
         u_grade = st.selectbox("所在年级", ["小学四年级", "小学五年级", "小学六年级", "初中一年级", "初中二年级"])
         u_ai = st.selectbox("AI 分组类型", ["指导型AI", "支持型AI"])
-        if st.form_submit_button("确认并开始实验"):
+        st.divider()
+        if st.button("下一步", key="nav_info"):
             if u_id:
                 st.session_state.user_info = {"id": u_id, "grade": u_grade, "ai_type": u_ai}
                 st.session_state.ai_instruction = get_ai_instruction(u_ai, st.session_state.q_main)
@@ -137,75 +126,73 @@ if st.session_state.stage == "信息填写":
             else:
                 st.error("请输入被试编号")
 
-# --- 2. 前测阶段 ---
-elif st.session_state.stage == "前测阶段":
-    st.header("第一阶段：前测自答")
-    st.info(f"**题目内容：**\n\n{st.session_state.q_main['content']}")
-    ans = st.text_area("请在这里写下你的初始思考：", key="ans_pre", height=250)
-    st.session_state.responses['pre_test'] = ans
-    if st.button("✅ 保存并进入 AI 互动阶段"):
-        next_stage()
-    countdown_timer(5)
-
-# --- 3. AI互动阶段 ---
-elif st.session_state.stage == "AI互动":
-    st.header("第二阶段：AI 互动辅助")
-    st.write("请利用 AI 辅助你深入思考。此阶段无需在网页内填写答案。")
-    st.info(f"**针对题目：**\n\n{st.session_state.q_main['content']}")
-    st.subheader("请点击复制下方指令并发送给 AI：")
-    st.code(st.session_state.ai_instruction, language=None)
-    st.link_button("🚀 前往 豆包 AI (Doubao)", "https://www.doubao.com/")
-    st.divider()
-    if st.button("✅ 互动已完成，进入后测阶段"):
-        next_stage()
-    countdown_timer(3)
-
-# --- 4. 后测阶段 ---
-elif st.session_state.stage == "后测阶段":
-    st.header("第三阶段：后测整理")
-    st.write("请结合刚才的互动交流，给出你对该题的最终答案：")
-    st.info(f"**题目内容：**\n\n{st.session_state.q_main['content']}")
-    # 这里已经彻底删除了 AI 跳转链接，只留答题框
-    ans = st.text_area("请在这里写下你的最终答案：", key="ans_post", height=350)
-    st.session_state.responses['post_test'] = ans
-    if st.button("✅ 提交最终答案，进入迁移测试"):
-        next_stage()
-    countdown_timer(5)
-
-# --- 5. 迁移阶段 ---
-elif st.session_state.stage == "迁移阶段":
-    st.header("第四阶段：迁移能力测试")
-    st.success(f"**这是一道全新的题目：**\n\n{st.session_state.q_transfer['content']}")
-    ans = st.text_area("请独立作答（不可使用 AI）：", key="ans_transfer", height=300)
-    st.session_state.responses['transfer_test'] = ans
-    if st.button("✅ 完成答题，进入最后问卷"):
-        next_stage()
-    countdown_timer(5)
-
-# --- 6. 问卷阶段 ---
-elif st.session_state.stage == "问卷阶段":
-    st.header("第五阶段：实验反馈问卷")
-    survey_results = {}
-    with st.form("survey_form"):
-        for section in SURVEY_CORPUS:
-            st.markdown(f"### 【{section['dim']}】")
-            for q in section['qs']:
-                survey_results[q] = st.select_slider(q, options=SURVEY_OPTIONS, value="一般")
-            st.divider()
-        if st.form_submit_button("提交问卷"):
-            st.session_state.responses['survey'] = survey_results
+    # --- 阶段 2：前测阶段 ---
+    elif st.session_state.stage == "前测阶段":
+        st.header("第一阶段：前测自答")
+        st.info(f"**题目内容：**\n\n{st.session_state.q_main['content']}")
+        ans = st.text_area("请写下你的思考：", key="ans_pre", height=250)
+        st.session_state.responses['pre_test'] = ans
+        st.divider()
+        if st.button("下一步", key="nav_pre"):
             next_stage()
+        countdown_timer(5)
 
-# --- 7. 实验完成 ---
-elif st.session_state.stage == "实验完成":
-    st.balloons()
-    st.header("🎉 实验已结束！")
-    final_payload = {
-        "info": st.session_state.user_info,
-        "data": st.session_state.responses,
-        "main_q_id": st.session_state.q_main['id'],
-        "time": datetime.now().strftime("%Y-%m-%d %H:%M")
-    }
-    secret_code = base64.b64encode(json.dumps(final_payload, ensure_ascii=False).encode()).decode()
-    st.warning("请复制下方【实验凭证】发给老师：")
-    st.code(secret_code, wrap_lines=True)
+    # --- 阶段 3：AI互动阶段 ---
+    elif st.session_state.stage == "AI互动":
+        st.header("第二阶段：AI 互动辅助")
+        st.info(f"**针对题目：**\n\n{st.session_state.q_main['content']}")
+        st.subheader("请复制指令发送给 AI：")
+        st.code(st.session_state.ai_instruction, language=None)
+        st.link_button("🚀 前往 豆包 AI", "https://www.doubao.com/")
+        st.divider()
+        if st.button("下一步", key="nav_ai"):
+            next_stage()
+        countdown_timer(3)
+
+    # --- 阶段 4：后测阶段 ---
+    elif st.session_state.stage == "后测阶段":
+        st.header("第三阶段：后测整理")
+        st.info(f"**题目内容：**\n\n{st.session_state.q_main['content']}")
+        ans = st.text_area("请写下最终答案：", key="ans_post", height=350)
+        st.session_state.responses['post_test'] = ans
+        st.divider()
+        if st.button("下一步", key="nav_post"):
+            next_stage()
+        countdown_timer(5)
+
+    # --- 阶段 5：迁移阶段 ---
+    elif st.session_state.stage == "迁移阶段":
+        st.header("第四阶段：迁移能力测试")
+        st.success(f"**新题目：**\n\n{st.session_state.q_transfer['content']}")
+        ans = st.text_area("请独立作答：", key="ans_transfer", height=300)
+        st.session_state.responses['transfer_test'] = ans
+        st.divider()
+        if st.button("下一步", key="nav_transfer"):
+            next_stage()
+        countdown_timer(5)
+
+    # --- 阶段 6：问卷阶段 ---
+    elif st.session_state.stage == "问卷阶段":
+        st.header("第五阶段：反馈问卷")
+        with st.form("survey_form"):
+            results = {}
+            for section in SURVEY_CORPUS:
+                st.markdown(f"### 【{section['dim']}】")
+                for q in section['qs']:
+                    results[q] = st.select_slider(q, options=SURVEY_OPTIONS, value="一般")
+                st.divider()
+            if st.form_submit_button("下一步"):
+                st.session_state.responses['survey'] = results
+                next_stage()
+
+    # --- 阶段 7：实验完成 ---
+    elif st.session_state.stage == "实验完成":
+        st.balloons()
+        st.header("🎉 实验已结束！")
+        final_payload = {
+            "info": st.session_state.user_info, "data": st.session_state.responses,
+            "main_q_id": st.session_state.q_main['id'], "time": datetime.now().strftime("%Y-%m-%d %H:%M")
+        }
+        secret_code = base64.b64encode(json.dumps(final_payload, ensure_ascii=False).encode()).decode()
+        st.warning("请复制下方凭证发给老师：")
+        st.code(secret_code, wrap_lines=True)
