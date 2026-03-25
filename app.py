@@ -18,7 +18,7 @@ QUESTION_BANK = [
             "从“减少热量吸收”的角度，小明可以借助哪些身边物品延缓冰激凌融化？",
             "若向路人或商家求助，小明可以提出哪些合理的协助请求？",
             "若小明家距离购买地较远，他能通过调整行动方式来避免冰激凌融化吗？",
-            "小明当下能利用的随身物品或周边环境资源有哪些可用于保冷？"
+            "小明当下能利用的随身物品 or 周边环境资源有哪些可用于保冷？"
         ]
     },
     {
@@ -46,6 +46,7 @@ SURVEY_OPTIONS = ["非常不同意", "不同意", "一般", "同意", "非常同
 # ==========================================
 
 def get_ai_instruction(ai_type, question_obj):
+    """生成指令：严格遵循你的字数要求描述"""
     content = question_obj['content']
     if ai_type == "指导型AI":
         return f"【指令】：针对题目：{content}，直接给出正确答案，字数要求400-500字。"
@@ -58,6 +59,7 @@ def get_ai_instruction(ai_type, question_obj):
         )
 
 def next_stage():
+    """阶段跳转逻辑"""
     stages = ["信息填写", "前测阶段", "AI互动", "后测阶段", "迁移阶段", "问卷阶段", "实验完成"]
     curr_idx = stages.index(st.session_state.stage)
     if curr_idx < len(stages) - 1:
@@ -66,6 +68,7 @@ def next_stage():
         st.rerun()
 
 def countdown_timer(duration_min):
+    """倒计时逻辑：保留30秒预警"""
     total_sec = duration_min * 60
     if st.session_state.start_time is None:
         st.session_state.start_time = time.time()
@@ -73,7 +76,6 @@ def countdown_timer(duration_min):
     elapsed = time.time() - st.session_state.start_time
     remaining = max(0, int(total_sec - elapsed))
     
-    # 侧边栏字号也会受全局CSS影响
     st.sidebar.title("⏱️ 实验计时")
     st.sidebar.metric("剩余时间", f"{remaining // 60:02d}:{remaining % 60:02d}")
     
@@ -94,34 +96,16 @@ def countdown_timer(duration_min):
 
 st.set_page_config(page_title="AI学习干预实验平台", layout="centered")
 
-# --- 全局字号调大样式注入 ---
+# --- 这里修复了导致 TypeError 的参数问题 ---
 st.markdown("""
     <style>
-    /* 调大所有正文字体 */
-    html, body, [class*="css"] {
-        font-size: 20px !important;
-    }
-    /* 调大输入框和答题框的字体 */
-    textarea, input {
-        font-size: 22px !important;
-        line-height: 1.5 !important;
-    }
-    /* 调大按钮文字 */
-    .stButton>button {
-        font-size: 22px !important;
-        height: 3em !important;
-        width: 100% !important;
-    }
-    /* 调大侧边栏计时器文字 */
-    [data-testid="stMetricValue"] {
-        font-size: 40px !important;
-    }
-    /* 调大 Markdown 正文 */
-    .stMarkdown p {
-        font-size: 22px !important;
-    }
+    html, body, [class*="css"] { font-size: 20px !important; }
+    textarea, input { font-size: 22px !important; line-height: 1.5 !important; }
+    .stButton>button { font-size: 22px !important; height: 3em !important; width: 100% !important; }
+    [data-testid="stMetricValue"] { font-size: 40px !important; }
+    .stMarkdown p { font-size: 22px !important; }
     </style>
-    """, unsafe_allow_stdio=True, unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
 
 if 'stage' not in st.session_state:
     st.session_state.stage = "信息填写"
@@ -140,7 +124,6 @@ if 'stage' not in st.session_state:
 # --- 1. 信息填写 ---
 if st.session_state.stage == "信息填写":
     st.title("🧪 AI学习干预实验平台")
-    st.write("请填写以下信息开始实验：")
     with st.form("info_form"):
         u_id = st.text_input("被试编号")
         u_grade = st.selectbox("所在年级", ["小学四年级", "小学五年级", "小学六年级", "初中一年级", "初中二年级"])
@@ -179,7 +162,6 @@ elif st.session_state.stage == "AI互动":
 # --- 4. 后测阶段 (5min) ---
 elif st.session_state.stage == "后测阶段":
     st.header("第三阶段：后测整理")
-    st.write("请结合刚才的互动交流，给出你的最终答案：")
     st.info(f"**题目内容：**\n\n{st.session_state.q_main['content']}")
     ans = st.text_area("请在这里写下你的最终答案：", key="ans_post", height=350)
     st.session_state.responses['post_test'] = ans
@@ -201,7 +183,6 @@ elif st.session_state.stage == "迁移阶段":
 elif st.session_state.stage == "问卷阶段":
     st.header("第五阶段：实验反馈问卷")
     survey_results = {}
-    # 问卷表单字号也会受 CSS 影响
     with st.form("survey_form"):
         for section in SURVEY_CORPUS:
             st.markdown(f"### 【{section['dim']}】")
@@ -216,7 +197,6 @@ elif st.session_state.stage == "问卷阶段":
 elif st.session_state.stage == "实验完成":
     st.balloons()
     st.header("🎉 实验已结束！")
-    st.write("感谢参与。你的数据已安全记录。")
     final_payload = {
         "info": st.session_state.user_info,
         "data": st.session_state.responses,
@@ -224,5 +204,5 @@ elif st.session_state.stage == "实验完成":
         "time": datetime.now().strftime("%Y-%m-%d %H:%M")
     }
     secret_code = base64.b64encode(json.dumps(final_payload, ensure_ascii=False).encode()).decode()
-    st.warning("请将下方【实验凭证】复制发给老师：")
+    st.warning("请复制下方【实验凭证】发给老师：")
     st.code(secret_code, wrap_lines=True)
