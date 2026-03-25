@@ -4,8 +4,8 @@ import json
 import time
 import base64
 
-# --- 1. 全局样式配置 (调大字号) ---
-st.set_page_config(page_title="AI 学习实验控制台", layout="centered")
+# --- 1. 样式配置 (调大字号) ---
+st.set_page_config(page_title="AI 实验控制台", layout="centered")
 st.markdown("""
     <style>
     html, body, [class*="css"] { font-size: 24px !important; }
@@ -16,9 +16,9 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 2. 核心跳转函数 ---
+# --- 2. 状态跳转函数 ---
 def next_step(next_val):
-    # 清理所有计时器相关的旧缓存
+    # 彻底清理所有计时器相关的旧缓存
     for key in list(st.session_state.keys()):
         if key.endswith("_end") or key.startswith("t_"):
             del st.session_state[key]
@@ -35,108 +35,100 @@ def smart_timer(total_seconds, key):
     if remaining <= 0: return True
     
     if remaining <= 30:
-        st.markdown(f'<p class="timer-warning">⚠️ 警告：本环节即将结束！剩余 {remaining} 秒</p>', unsafe_allow_html=True)
+        st.markdown(f'<p class="timer-warning">⚠️ 警告：时间即将耗尽！剩余 {remaining} 秒</p>', unsafe_allow_html=True)
     
     time.sleep(1)
     st.rerun()
     return False
 
-# --- 4. 实验流程控制 ---
+# --- 4. 核心渲染逻辑 ---
 if 'step' not in st.session_state:
     st.session_state.step = 1
     st.session_state.data = {}
 
-# --- [注意] 以下使用 if-elif 严格隔离，确保同一时间只运行一个阶段的代码 ---
+# 【关键】创建一个空的占位符作为唯一的渲染容器
+placeholder = st.empty()
 
-# 阶段 1：信息登记
-if st.session_state.step == 1:
-    st.header("📋 登记信息")
-    # 请求通知权限
-    st.components.v1.html("<script>Notification.requestPermission();</script>", height=0)
-    
-    sid = st.text_input("请输入被试编号:", key="input_sid")
-    age = st.selectbox("请选择学段:", ["1 (小学)", "2 (中学)"], key="select_age")
-    grp = st.selectbox("请选择分配组别:", ["1 (指导型)", "2 (支持型)"], key="select_grp")
-    
-    if st.button("🚀 开始实验", key="main_start_btn"):
-        if sid:
-            try:
-                with open("question_bank.json", "r", encoding="utf-8") as f:
-                    bank = json.load(f)
-                age_key = age[0]
-                if age_key in bank and len(bank[age_key]) >= 2:
-                    sel = random.sample(bank[age_key], 2)
-                    st.session_state.main_i = sel[0]
-                    st.session_state.trans_i = sel[1]
-                    st.session_state.data.update({
-                        'sid': sid, 
-                        'group': "指导型" if "1" in grp else "支持型"
-                    })
-                    next_step(2)
-                else:
-                    st.error("题库数据异常。")
-            except:
-                st.error("初始化失败，请检查 question_bank.json。")
+# 使用 with 语句确保每次渲染都是从空白开始
+with placeholder.container():
+    # 阶段 1：信息登记
+    if st.session_state.step == 1:
+        st.header("📋 登记信息")
+        sid = st.text_input("请输入被试编号:", key="s1_sid")
+        age = st.selectbox("请选择学段:", ["1 (小学)", "2 (中学)"], key="s1_age")
+        grp = st.selectbox("请选择分配组别:", ["1 (指导型)", "2 (支持型)"], key="s1_grp")
+        
+        if st.button("🚀 开始实验", key="s1_start_btn"):
+            if sid:
+                try:
+                    with open("question_bank.json", "r", encoding="utf-8") as f:
+                        bank = json.load(f)
+                    age_key = age[0]
+                    if age_key in bank and len(bank[age_key]) >= 2:
+                        sel = random.sample(bank[age_key], 2)
+                        st.session_state.main_i = sel[0]
+                        st.session_state.trans_i = sel[1]
+                        st.session_state.data.update({
+                            'sid': sid, 
+                            'group': "指导型" if "1" in grp else "支持型"
+                        })
+                        next_step(2)
+                    else:
+                        st.error("题库中该组别题目不足。")
+                except:
+                    st.error("初始化失败，请检查 question_bank.json 是否存在。")
+            else:
+                st.warning("请输入编号。")
+
+    # 阶段 2：前测
+    elif st.session_state.step == 2:
+        st.header("📝 阶段 1：前测")
+        st.info(f"题目：{st.session_state.main_i['content']}")
+        ans = st.text_area("请在这里输入你的回答：", height=400, key="s2_ans")
+        if st.button("✅ 提交并进入下一步", key="s2_btn") or smart_timer(300, "t1"):
+            st.session_state.data['pre_ans'] = ans
+            next_step(3)
+
+    # 阶段 3：互动
+    elif st.session_state.step == 3:
+        st.header("🤖 阶段 2：AI 互动学习")
+        st.error("❗ 时间到将自动跳转。")
+        st.markdown(f"### 🔍 题目：{st.session_state.main_i['content']}")
+        
+        group = st.session_state.data['group']
+        if group == "指导型":
+            prompt = f"针对题目《{st.session_state.main_i['content']}》直接给出答案。"
         else:
-            st.warning("请输入编号。")
+            ins = random.choice(st.session_state.main_i['instructions'])
+            prompt = f"针对题目《{st.session_state.main_i['content']}》，基于线索『{ins}』启发我。"
+        
+        st.code(prompt)
+        st.link_button("👉 点击打开豆包", "https://www.doubao.com")
+        if st.button("✅ 互动结束", key="s3_btn") or smart_timer(180, "t2"):
+            next_step(4)
 
-# 阶段 2：前测
-elif st.session_state.step == 2:
-    st.header("📝 阶段 1：前测")
-    st.info(f"题目：{st.session_state.main_i['content']}")
-    ans = st.text_area("请在这里输入你的回答：", height=400, key="ans_p1")
-    
-    if st.button("✅ 提交并进入下一步") or smart_timer(300, "t1"):
-        st.session_state.data['pre_ans'] = ans
-        next_step(3)
+    # 阶段 4：后测
+    elif st.session_state.step == 4:
+        st.header("🏁 阶段 3：后测")
+        st.info(f"题目：{st.session_state.main_i['content']}")
+        ans = st.text_area("请再次回答：", height=400, key="s4_ans")
+        if st.button("✅ 提交并进入下一步", key="s4_btn") or smart_timer(300, "t3"):
+            st.session_state.data['post_ans'] = ans
+            next_step(5)
 
-# 阶段 3：AI 互动
-elif st.session_state.step == 3:
-    st.header("🤖 阶段 2：AI 互动学习")
-    st.error("❗ 时间到将自动跳转。")
-    st.markdown(f"### 🔍 题目：{st.session_state.main_i['content']}")
-    
-    # 指导语逻辑
-    group = st.session_state.data['group']
-    if group == "指导型":
-        prompt = f"针对题目《{st.session_state.main_i['content']}》直接给出答案。"
-        ins = "N/A"
-    else:
-        ins = random.choice(st.session_state.main_i['instructions'])
-        prompt = f"针对题目《{st.session_state.main_i['content']}》，基于线索『{ins}』启发我。"
-    
-    st.session_state.data['used_ins'] = ins
-    st.code(prompt)
-    st.link_button("👉 点击打开豆包进行互动", "https://www.doubao.com")
-    
-    if st.button("✅ 互动结束") or smart_timer(180, "t2"):
-        next_step(4)
+    # 阶段 5：迁移
+    elif st.session_state.step == 5:
+        st.header("🚀 阶段 4：迁移测试")
+        st.success("🌟 独立解决新题：")
+        st.info(f"题目：{st.session_state.trans_i['content']}")
+        ans = st.text_area("请输入回答：", height=400, key="s5_ans")
+        if st.button("✅ 完成实验", key="s5_btn") or smart_timer(300, "t4"):
+            st.session_state.data['trans_ans'] = ans
+            next_step(6)
 
-# 阶段 4：后测
-elif st.session_state.step == 4:
-    st.header("🏁 阶段 3：后测")
-    st.info(f"题目：{st.session_state.main_i['content']}")
-    ans = st.text_area("请再次输入你的回答：", height=400, key="ans_p3")
-    
-    if st.button("✅ 提交并进入下一步") or smart_timer(300, "t3"):
-        st.session_state.data['post_ans'] = ans
-        next_step(5)
-
-# 阶段 5：迁移测试
-elif st.session_state.step == 5:
-    st.header("🚀 阶段 4：迁移测试")
-    st.success("🌟 请利用学到的方法独立解决新题。")
-    st.info(f"新题目：{st.session_state.trans_i['content']}")
-    ans = st.text_area("请在此输入回答：", height=400, key="ans_p4")
-    
-    if st.button("✅ 完成实验") or smart_timer(300, "t4"):
-        st.session_state.data['trans_ans'] = ans
-        next_step(6)
-
-# 阶段 6：回收
-elif st.session_state.step == 6:
-    st.balloons()
-    st.success("🎉 全部实验已结束！")
-    b64 = base64.b64encode(json.dumps(st.session_state.data, ensure_ascii=False).encode()).decode()
-    st.write("请复制下方代码发给主试：")
-    st.code(b64)
+    # 阶段 6：回收
+    elif st.session_state.step == 6:
+        st.success("🎉 全部实验已结束！")
+        b64 = base64.b64encode(json.dumps(st.session_state.data, ensure_ascii=False).encode()).decode()
+        st.write("请复制下方代码：")
+        st.code(b64)
