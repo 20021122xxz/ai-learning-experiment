@@ -4,11 +4,15 @@ import json
 import time
 import base64
 
-# --- 1. 样式与标题 ---
+# --- 1. 样式与标题控制 ---
 st.set_page_config(page_title="AI 学习干预实验平台", layout="centered")
-st.title("🎓 AI 学习干预实验平台")
 
-# 调大字号
+# 使用 Markdown 自定义标题字号，防止换行
+st.markdown("""
+    <h1 style='text-align: center; font-size: 42px; white-space: nowrap;'>🎓 AI 学习干预实验平台</h1>
+    """, unsafe_allow_html=True)
+
+# 调大正文字号
 st.markdown("""
     <style>
     html, body, [class*="css"] { font-size: 24px !important; }
@@ -21,7 +25,6 @@ st.markdown("""
 
 # --- 2. 状态跳转函数 ---
 def next_step(next_val):
-    # 清理所有计时器相关的旧缓存
     for key in list(st.session_state.keys()):
         if key.endswith("_end") or key.startswith("t_"):
             del st.session_state[key]
@@ -115,18 +118,4 @@ elif st.session_state.step == 4:
         next_step(5)
 
 # 阶段 5：迁移
-elif st.session_state.step == 5:
-    st.header("🚀 阶段 4：迁移测试")
-    st.success("🌟 独立解决新题：")
-    st.info(f"题目：{st.session_state.trans_i['content']}")
-    ans = st.text_area("请输入回答：", height=400, key="s5_ans")
-    if st.button("✅ 完成实验", key="s5_btn") or smart_timer(300, "t4"):
-        st.session_state.data['trans_ans'] = ans
-        next_step(6)
-
-# 阶段 6：回收
-elif st.session_state.step == 6:
-    st.success("🎉 全部实验已结束！")
-    b64 = base64.b64encode(json.dumps(st.session_state.data, ensure_ascii=False).encode()).decode()
-    st.write("请复制下方代码：")
-    st.code(b64)
+elif st.session_
