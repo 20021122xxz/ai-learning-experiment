@@ -60,7 +60,7 @@ Q_D = {
 
 # 分别定义 AI互动环节题库 和 迁移环节题库（目前使用相同的两道题填充）
 MAIN_QUESTION_BANK = [Q_A, Q_B]
-TRANSFER_QUESTION_BANK = [Q_A, Q_B]
+TRANSFER_QUESTION_BANK = [Q_C, Q_D]
 
 SURVEY_CORPUS = [
     {"dim": "学习投入度", "qs": ["我非常努力地思考了问题的答案", "我对解决这个题目充满了动力"]},
