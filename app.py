@@ -8,30 +8,59 @@ from datetime import datetime
 # ==========================================
 # 1. 语料库
 # ==========================================
-QUESTION_BANK = [
-    {
-        "id": "A",
-        "title": "冰激凌融化挑战",
-        "content": "暑假到了，天气非常炎热。小明和父母去买冰激凌准备带回家。但在回家途中，冰激凌开始融化。请问在没有冷藏设备的情况下，小明可以利用身边哪些物品或改变哪些行为来延缓融化？",
-        "scaffolding_prompts": [
-            "从“减少热量吸收”的角度，小明可以借助哪些身边物品延缓冰激凌融化？",
-            "若向路人或商家求助，小明可以提出哪些合理的协助请求？",
-            "若小明家距离购买地较远，他能通过调整行动方式来避免冰激凌融化吗？",
-            "小明当下能利用的随身物品或周边环境资源有哪些可用于保冷？"
-        ]
-    },
-    {
-        "id": "B",
-        "title": "课堂干扰应对方案",
-        "content": "小红邻座的小紫经常在课堂上找她说话，导致小红无法集中注意力听课。请问小红应该采取哪些沟通策略或自我调节方法，既能保证听课，又不伤害友谊？",
-        "scaffolding_prompts": [
-            "小红可以直接和小紫沟通解决干扰问题吗？沟通时要注意什么？",
-            "若不想直接沟通，小红能向老师或同学寻求哪些帮助？",
-            "小红调整自己的听课状态能减少干扰影响吗？具体可以怎么做？",
-            "长期解决课堂干扰问题，小红可以和老师提出哪些合理建议？"
-        ]
-    }
-]
+# 为了方便填充两个题库，我们先定义两道题的字典
+Q_A = {
+    "id": "A",
+    "title": "冰激凌融化挑战",
+    "content": "暑假到了，天气非常炎热。小明和父母去买冰激凌准备带回家。但在回家途中，冰激凌开始融化。请问在没有冷藏设备的情况下，小明可以利用身边哪些物品或改变哪些行为来延缓融化？",
+    "scaffolding_prompts": [
+        "从“减少热量吸收”的角度，小明可以借助哪些身边物品延缓冰激凌融化？",
+        "若向路人或商家求助，小明可以提出哪些合理的协助请求？",
+        "若小明家距离购买地较远，他能通过调整行动方式来避免冰激凌融化吗？",
+        "小明当下能利用的随身物品或周边环境资源有哪些可用于保冷？"
+    ]
+}
+
+Q_B = {
+    "id": "B",
+    "title": "课堂干扰应对方案",
+    "content": "小红邻座的小紫经常在课堂上找她说话，导致小红无法集中注意力听课。请问小红应该采取哪些沟通策略或自我调节方法，既能保证听课，又不伤害友谊？",
+    "scaffolding_prompts": [
+        "小红可以直接和小紫沟通解决干扰问题吗？沟通时要注意什么？",
+        "若不想直接沟通，小红能向老师或同学寻求哪些帮助？",
+        "小红调整自己的听课状态能减少干扰影响吗？具体可以怎么做？",
+        "长期解决课堂干扰问题，小红可以和老师提出哪些合理建议？"
+    ]
+}
+
+Q_C = {
+    "id": "C",
+    "title": "自行车购买策略",
+    "content": "小绿同学在放学之后想和好朋友一起骑自行车，他的好朋友每人都有一辆自行车，可是他还没有，所以小绿很想拥有一辆属于他自己的自行车，但他发现自己的钱不够买一辆自行车。请问小绿面对这样的情况，他应该怎么办？尽可能多地提供出你的方案",
+    "scaffolding_prompts": [
+        "小绿能通过劳动或兼职的方式赚取买自行车的钱吗？具体可以做哪些事？",
+        "小绿可以和父母达成哪些“约定”来获得购车资金支持？",
+        "小绿是否可以通过一些方式让自行车便宜一些？",
+        "小绿是否可以利用即将到来的特殊日子（如自己的生日、新年），向亲戚长辈们提出一个怎样的“心愿众筹”或“礼物折现”计划呢？"
+    ]
+}
+
+Q_D = {
+    "id": "D",
+    "title": "忘写作业补救方法",
+    "content": "昨天晚上电视上播放了你最喜欢的动漫，你看得太开心了以至于忘了写作业了。当你今天早上准备去学校的时候才发现你的作业在第一节课就要交了。惨了，怎么办？尽可能多地提供你的方案",
+    "scaffolding_prompts": [
+        "向老师说明情况时，怎样表达能获得老师的理解？",
+        "若想补写作业，能和老师协商哪些补写与提交的方式？",
+        "早上上学前的短暂时间里，能快速补写哪些作业内容？",
+        "同学之间可以提供哪些帮助来解决作业未完成的问题？"
+    ]
+}
+
+
+# 分别定义 AI互动环节题库 和 迁移环节题库（目前使用相同的两道题填充）
+MAIN_QUESTION_BANK = [Q_A, Q_B]
+TRANSFER_QUESTION_BANK = [Q_A, Q_B]
 
 SURVEY_CORPUS = [
     {"dim": "学习投入度", "qs": ["我非常努力地思考了问题的答案", "我对解决这个题目充满了动力"]},
@@ -60,9 +89,11 @@ if 'stage' not in st.session_state:
     st.session_state.stage = 0
     st.session_state.start_time = None
     st.session_state.responses = {}
-    indices = [0, 1]; random.shuffle(indices)
-    st.session_state.q_main = QUESTION_BANK[indices[0]]
-    st.session_state.q_transfer = QUESTION_BANK[indices[1]]
+    
+    # 修改后的抽题逻辑：从两个题库中分别独立随机抽取一道题
+    st.session_state.q_main = random.choice(MAIN_QUESTION_BANK)
+    st.session_state.q_transfer = random.choice(TRANSFER_QUESTION_BANK)
+    
     st.session_state.ai_instruction = ""
 
 # 阶段列表
@@ -74,6 +105,7 @@ def get_ai_instruction(ai_type, question_obj):
     if ai_type == "指导型AI":
         return f"【指令】：针对题目：{content}，直接给出正确答案，{length}"
     else:
+        # 原有的引导问题随机抽取逻辑
         scaffold = random.choice(question_obj['scaffolding_prompts'])
         return f"【指令】：针对题目：{content}，请根据线索：“{scaffold}”，启发我思考并引导我找出正确答案，{length}"
 
@@ -116,7 +148,8 @@ if curr_stage_name == "信息填写":
             st.session_state.user_info = {"id": u_id, "grade": u_grade, "ai_type": u_ai}
             st.session_state.ai_instruction = get_ai_instruction(u_ai, st.session_state.q_main)
             next_stage()
-        else: st.error("请填写编号")
+        else: 
+            st.error("请填写编号")
 
 # --- 2. 前测阶段 (5min) ---
 elif curr_stage_name == "前测阶段":
@@ -130,7 +163,7 @@ elif curr_stage_name == "前测阶段":
 elif curr_stage_name == "AI互动":
     st.header("第二阶段：AI 互动辅助")
 
-# 新增的指导语警告框
+    # 新增的指导语警告框
     st.error("📢 重要提示：请用纸笔记录你认为的答案重点，并在倒计时结束之前返回实验页面。倒计时结束会强制继续下一个环节输入你整理过后的答案，且不可返回原页面。")
 
     st.code(st.session_state.ai_instruction, language=None)
@@ -174,8 +207,11 @@ elif curr_stage_name == "实验完成":
     st.balloons()
     st.header("🎉 实验已结束！")
     final_payload = {
-        "info": st.session_state.user_info, "data": st.session_state.responses,
-        "main_q_id": st.session_state.q_main['id'], "time": datetime.now().strftime("%Y-%m-%d %H:%M")
+        "info": st.session_state.user_info, 
+        "data": st.session_state.responses,
+        "main_q_id": st.session_state.q_main['id'], 
+        "transfer_q_id": st.session_state.q_transfer['id'], # 新增记录了抽到的迁移题ID
+        "time": datetime.now().strftime("%Y-%m-%d %H:%M")
     }
     code = base64.b64encode(json.dumps(final_payload, ensure_ascii=False).encode()).decode()
     st.warning("请将下方凭证发给老师：")
