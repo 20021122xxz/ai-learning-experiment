@@ -8,7 +8,6 @@ from datetime import datetime
 # ==========================================
 # 1. 语料库
 # ==========================================
-# 为了方便填充两个题库，我们先定义两道题的字典
 Q_A = {
     "id": "A",
     "title": "冰激凌融化挑战",
@@ -65,26 +64,18 @@ TRANSFER_QUESTION_BANK = [Q_C, Q_D]
 # 1. 定义默认选项，方便前几个问题复用
 DEFAULT_OPTIONS = ["完全没有", "较少", "一般", "较多", "非常多"]
 
-# 2. 为最后三个问题（或其他需要特殊选项的问题）定义专属选项
-OPTIONS_USABILITY = ["非常难用", "不太好用", "一般", "比较好用", "非常易用"]
-OPTIONS_CLARITY = ["非常模糊", "比较模糊", "一般", "比较清晰", "非常清晰"]
-OPTIONS_IMPORTANCE = ["毫不重要", "不太重要", "一般", "比较重要", "非常重要"]
-# 你也可以为第5题单独设一个百分比选项
-OPTIONS_CONTRIBUTION = ["0-20%", "21-40%", "41-60%", "61-80%", "81-100%"]
-
-# 3. 将选项直接写入每个字典中
+# 2. 将选项和维度直接写入每个字典中
 SURVEY_CORPUS = [
-    {"qs": ["你认为你在这项任务中获得了多大程度的认知相关益处"], "options": DEFAULT_OPTIONS},
-    {"qs": ["你觉得这项任务在多大程度上有趣"], "options": DEFAULT_OPTIONS},
-    {"qs": ["你觉得这项任务在多大程度上困难"], "options": DEFAULT_OPTIONS}, # 已补上逗号
-    {"qs": ["你在多大程度上积极寻求解决答案"], "options": DEFAULT_OPTIONS},
-    {"qs": ["假设最终想法的比例分别由你和AI贡献，你觉得你自己的贡献有多少"], "options": OPTIONS_CONTRIBUTION}, 
-    {"qs": ["你在这项任务上投入了多大程度的脑力"], "options": DEFAULT_OPTIONS},
-    {"qs": ["AI在解决这个任务时对你有多大的用处"], "options": DEFAULT_OPTIONS},
-    # 以下三个问题使用了你手动自定义的选项
-    {"qs": ["你是否觉得AI易于使用"], "options": OPTIONS_USABILITY},
-    {"qs": ["我对AI的交互过程感到清晰且易于理解"], "options": OPTIONS_CLARITY},
-    {"qs": ["你觉得给出的引导问题是否重要"], "options": OPTIONS_IMPORTANCE}
+    {"dim": "认知获益", "qs": ["你认为你在这项任务中获得了多大程度的认知相关益处"], "options": DEFAULT_OPTIONS},
+    {"dim": "任务趣味性", "qs": ["你觉得这项任务在多大程度上有趣"], "options": DEFAULT_OPTIONS},
+    {"dim": "任务难度", "qs": ["你觉得这项任务在多大程度上困难"], "options": DEFAULT_OPTIONS},
+    {"dim": "参与积极性", "qs": ["你在多大程度上积极寻求解决答案"], "options": DEFAULT_OPTIONS},
+    {"dim": "协作贡献度", "qs": ["假设最终想法的比例分别由你和AI贡献，你觉得你自己的贡献有多少"], "options": ["0-20%", "21-40%", "41-60%", "61-80%", "81-100%"]}, 
+    {"dim": "认知负荷", "qs": ["你在这项任务上投入了多大程度的脑力"], "options": DEFAULT_OPTIONS},
+    {"dim": "AI实用性", "qs": ["AI在解决这个任务时对你有多大的用处"], "options": DEFAULT_OPTIONS},
+    {"dim": "AI易用性", "qs": ["你是否觉得AI易于使用"], "options": ["非常难用", "不太好用", "一般", "比较好用", "非常易用"]},
+    {"dim": "交互清晰度", "qs": ["我对AI的交互过程感到清晰且易于理解"], "options": ["非常模糊", "比较模糊", "一般", "比较清晰", "非常清晰"]},
+    {"dim": "引导有效性", "qs": ["你觉得给出的引导问题是否重要"], "options": ["毫不重要", "不太重要", "一般", "比较重要", "非常重要"]}
 ]
 
 # ==========================================
@@ -215,7 +206,17 @@ elif curr_stage_name == "问卷阶段":
         for section in SURVEY_CORPUS:
             st.markdown(f"### 【{section['dim']}】")
             for q in section['qs']:
-                results[q] = st.select_slider(q, options=SURVEY_OPTIONS, value="一般")
+                # 获取该问题对应的选项列表
+                current_options = section['options']
+                
+                # 动态获取默认值（取选项列表的中间项，如 5个选项就取第3个，避免报错）
+                default_val = current_options[len(current_options)//2] 
+                
+                results[q] = st.select_slider(
+                    q, 
+                    options=current_options, 
+                    value=default_val  # 不再写死 "一般"
+                )
         if st.form_submit_button("下一步"):
             st.session_state.responses['survey'] = results
             next_stage()
@@ -228,7 +229,7 @@ elif curr_stage_name == "实验完成":
         "info": st.session_state.user_info, 
         "data": st.session_state.responses,
         "main_q_id": st.session_state.q_main['id'], 
-        "transfer_q_id": st.session_state.q_transfer['id'], # 新增记录了抽到的迁移题ID
+        "transfer_q_id": st.session_state.q_transfer['id'], 
         "time": datetime.now().strftime("%Y-%m-%d %H:%M")
     }
     code = base64.b64encode(json.dumps(final_payload, ensure_ascii=False).encode()).decode()
