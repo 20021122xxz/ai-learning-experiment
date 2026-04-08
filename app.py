@@ -64,7 +64,7 @@ TRANSFER_QUESTION_BANK = [Q_C, Q_D]
 # 1. 定义默认选项
 DEFAULT_OPTIONS = ["完全没有", "较少", "一般", "较多", "非常多"]
 
-# 2. 将选项和维度直接写入每个字典中
+# 2. 将选项和维度直接写入每个字典中（严格按你的 8 道题）
 SURVEY_CORPUS = [
     {"dim": "任务趣味性", "qs": ["你觉得这项任务在多大程度上有趣"], "options": DEFAULT_OPTIONS},
     {"dim": "任务难度", "qs": ["你觉得这项任务在多大程度上困难"], "options": DEFAULT_OPTIONS},
@@ -73,7 +73,7 @@ SURVEY_CORPUS = [
     {"dim": "认知负荷", "qs": ["你在这项任务上投入了多大程度的脑力"], "options": DEFAULT_OPTIONS},
     {"dim": "AI实用性", "qs": ["AI在解决这个任务时对你有多大的用处"], "options": DEFAULT_OPTIONS},
     {"dim": "AI易用性", "qs": ["你是否觉得AI易于使用"], "options": ["非常难用", "不太好用", "一般", "比较好用", "非常易用"]},
-    {"dim": "交互清晰度", "qs": ["我对AI的交互过程感到清晰且易于理解"], "options": ["非常模糊", "比较模糊", "一般", "比较清晰", "非常清晰"]},
+    {"dim": "交互清晰度", "qs": ["我对AI的交互过程感到清晰且易于理解"], "options": ["非常模糊", "比较模糊", "一般", "比较清晰", "非常清晰"]}
 ]
 
 # ==========================================
@@ -198,4 +198,39 @@ elif curr_stage_name == "问卷阶段":
         for idx, section in enumerate(SURVEY_CORPUS):
             for q in section['qs']:
                 current_options = ["👈请滑动选择"] + section['options']
-                default
+                default_val = "👈请滑动选择"
+                
+                # 大字号渲染问题
+                st.markdown(f"<div style='font-size: 24px; font-weight: bold; margin-top: 25px; margin-bottom: 10px;'>{q}</div>", unsafe_allow_html=True)
+                
+                # 带防止缓存 key 和必选校验的滑块
+                results[q] = st.select_slider(
+                    label=q, 
+                    options=current_options, 
+                    value=default_val,
+                    label_visibility="collapsed",
+                    key=f"force_new_{idx}" 
+                )
+                
+        submit_clicked = st.form_submit_button("下一步")
+        if submit_clicked:
+            if "👈请滑动选择" in results.values():
+                st.error("⚠️ 还有未完成的题目，请滑动所有滑块进行选择后再提交！")
+            else:
+                st.session_state.responses['survey'] = results
+                next_stage()
+
+# --- 7. 实验完成 ---
+elif curr_stage_name == "实验完成":
+    st.balloons()
+    st.header("🎉 实验已结束！")
+    final_payload = {
+        "info": st.session_state.user_info, 
+        "data": st.session_state.responses,
+        "main_q_id": st.session_state.q_main['id'], 
+        "transfer_q_id": st.session_state.q_transfer['id'], 
+        "time": datetime.now().strftime("%Y-%m-%d %H:%M")
+    }
+    code = base64.b64encode(json.dumps(final_payload, ensure_ascii=False).encode()).decode()
+    st.warning("请将下方凭证发给老师：")
+    st.code(code, wrap_lines=True)
