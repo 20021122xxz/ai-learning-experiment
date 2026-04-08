@@ -176,7 +176,7 @@ elif curr_stage_name == "AI互动":
     st.error("📢 重要提示：请用纸笔记录你认为的答案重点，并在倒计时结束之前返回实验页面。倒计时结束会强制继续下一个环节输入你整理过后的答案，且不可返回原页面。")
 
     st.code(st.session_state.ai_instruction, language=None)
-    st.link_button("🚀 前往 豆包 AI", "https://www.doubao.com/")
+    st.link_button("🚀 先点击指令右侧复制内容，再点击此键跳转豆包 AI", "https://www.doubao.com/")
     st.divider()
     if st.button("下一步"): next_stage()
     run_timer(3)
@@ -205,25 +205,32 @@ elif curr_stage_name == "问卷阶段":
         results = {}
         for section in SURVEY_CORPUS:
             for q in section['qs']:
-                # 获取该问题对应的选项列表
-                current_options = section['options']
+                # 👇 改动点 1：在原始选项列表最前面加上一个占位提示
+                current_options = ["👈请滑动选择"] + section['options']
                 
-                # 动态获取默认值（取选项列表的中间项）
-                default_val = current_options[len(current_options)//2] 
+                # 👇 改动点 2：将默认值设为占位提示，强制滑块停在最左侧
+                default_val = "👈请滑动选择"
                 
                 # 单独渲染大字号的问题文本
                 st.markdown(f"<div style='font-size: 24px; font-weight: bold; margin-top: 25px; margin-bottom: 10px;'>{q}</div>", unsafe_allow_html=True)
                 
-                # 渲染滑动条，同时隐藏自带的标签
+                # 渲染滑动条
                 results[q] = st.select_slider(
                     label=q, 
                     options=current_options, 
                     value=default_val,
                     label_visibility="collapsed"
                 )
-        if st.form_submit_button("下一步"):
-            st.session_state.responses['survey'] = results
-            next_stage()
+                
+        # 👇 改动点 3：增加提交校验逻辑
+        submit_clicked = st.form_submit_button("下一步")
+        if submit_clicked:
+            # 检查搜集到的答案中，是否还有未改变初始状态的占位符
+            if "👈请滑动选择" in results.values():
+                st.error("⚠️ 还有未完成的题目，请滑动所有滑块进行选择后再提交！")
+            else:
+                st.session_state.responses['survey'] = results
+                next_stage()
 
 # --- 7. 实验完成 ---
 elif curr_stage_name == "实验完成":
