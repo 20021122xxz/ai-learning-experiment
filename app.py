@@ -57,11 +57,11 @@ Q_D = {
 }
 
 
-# 分别定义 AI互动环节题库 和 迁移环节题库（目前使用相同的两道题填充）
+# 分别定义 AI互动环节题库 和 迁移环节题库
 MAIN_QUESTION_BANK = [Q_A, Q_B]
 TRANSFER_QUESTION_BANK = [Q_C, Q_D]
 
-# 1. 定义默认选项，方便前几个问题复用
+# 1. 定义默认选项
 DEFAULT_OPTIONS = ["完全没有", "较少", "一般", "较多", "非常多"]
 
 # 2. 将选项和维度直接写入每个字典中
@@ -99,7 +99,6 @@ if 'stage' not in st.session_state:
     st.session_state.start_time = None
     st.session_state.responses = {}
     
-    # 修改后的抽题逻辑：从两个题库中分别独立随机抽取一道题
     st.session_state.q_main = random.choice(MAIN_QUESTION_BANK)
     st.session_state.q_transfer = random.choice(TRANSFER_QUESTION_BANK)
     
@@ -114,7 +113,6 @@ def get_ai_instruction(ai_type, question_obj):
     if ai_type == "指导型AI":
         return f"【指令】：针对题目：{content}，直接给出正确答案，{length}"
     else:
-        # 原有的引导问题随机抽取逻辑
         scaffold = random.choice(question_obj['scaffolding_prompts'])
         return f"【指令】：针对题目：{content}，请根据线索：“{scaffold}”，启发我思考并引导我找出正确答案，{length}"
 
@@ -171,10 +169,7 @@ elif curr_stage_name == "前测阶段":
 # --- 3. AI互动阶段 (3min) ---
 elif curr_stage_name == "AI互动":
     st.header("第二阶段：AI 互动辅助")
-
-    # 新增的指导语警告框
     st.error("📢 重要提示：请用纸笔记录你认为的答案重点，并在倒计时结束之前返回实验页面。倒计时结束会强制继续下一个环节输入你整理过后的答案，且不可返回原页面。")
-
     st.code(st.session_state.ai_instruction, language=None)
     st.link_button("🚀 先点击指令右侧复制内容，再点击此键跳转豆包 AI", "https://www.doubao.com/")
     st.divider()
@@ -200,49 +195,9 @@ elif curr_stage_name == "迁移阶段":
 # --- 6. 问卷阶段 ---
 elif curr_stage_name == "问卷阶段":
     st.header("第五阶段：反馈问卷")
-    # 问卷因为组件多，必须用 form 包裹
     with st.form("survey_form"):
         results = {}
-        for section in SURVEY_CORPUS:
+        for idx, section in enumerate(SURVEY_CORPUS):
             for q in section['qs']:
-                # 👇 改动点 1：在原始选项列表最前面加上一个占位提示
                 current_options = ["👈请滑动选择"] + section['options']
-                
-                # 👇 改动点 2：将默认值设为占位提示，强制滑块停在最左侧
-                default_val = "👈请滑动选择"
-                
-                # 单独渲染大字号的问题文本
-                st.markdown(f"<div style='font-size: 24px; font-weight: bold; margin-top: 25px; margin-bottom: 10px;'>{q}</div>", unsafe_allow_html=True)
-                
-                # 渲染滑动条
-                results[q] = st.select_slider(
-                    label=q, 
-                    options=current_options, 
-                    value=default_val,
-                    label_visibility="collapsed"
-                )
-                
-        # 👇 改动点 3：增加提交校验逻辑
-        submit_clicked = st.form_submit_button("下一步")
-        if submit_clicked:
-            # 检查搜集到的答案中，是否还有未改变初始状态的占位符
-            if "👈请滑动选择" in results.values():
-                st.error("⚠️ 还有未完成的题目，请滑动所有滑块进行选择后再提交！")
-            else:
-                st.session_state.responses['survey'] = results
-                next_stage()
-
-# --- 7. 实验完成 ---
-elif curr_stage_name == "实验完成":
-    st.balloons()
-    st.header("🎉 实验已结束！")
-    final_payload = {
-        "info": st.session_state.user_info, 
-        "data": st.session_state.responses,
-        "main_q_id": st.session_state.q_main['id'], 
-        "transfer_q_id": st.session_state.q_transfer['id'], 
-        "time": datetime.now().strftime("%Y-%m-%d %H:%M")
-    }
-    code = base64.b64encode(json.dumps(final_payload, ensure_ascii=False).encode()).decode()
-    st.warning("请将下方凭证发给老师：")
-    st.code(code, wrap_lines=True)
+                default
