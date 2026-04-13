@@ -123,18 +123,18 @@ curr_stage_name = STAGES[st.session_state.stage]
 
 with main_placeholder.container(): # 所有内容都画在容器里
     
-    # --- 阶段 1. 信息填写 (只有这里有按钮) ---
+    # --- 阶段 1. 信息填写 ---
     if curr_stage_name == "信息填写":
         st.title("🧪 AI学习干预实验平台")
         st.markdown('<div class="instruction-box">💡 请填写基本信息并选择AI分组，点击下方的按钮开始。</div>', unsafe_allow_html=True)
         u_ai = st.selectbox("请选择您的 AI 分组类型", ["指导型AI", "支持型AI"])
         
-        # 按钮名字改为“开始”
-        if st.button("开始"): 
-            st.session_state.ai_instruction = get_ai_instruction(u_ai, st.session_state.q_main)
-            next_stage()
+    # ✅ 修复：严格缩进，仅当前阶段渲染按钮
+    if st.button("开始"): 
+        st.session_state.ai_instruction = get_ai_instruction(u_ai, st.session_state.q_main)
+        next_stage()  # 切换阶段
 
-    # --- 阶段 2. 前测阶段 (无按钮) ---
+    # --- 阶段 2. 前测阶段 ---
     elif curr_stage_name == "前测阶段":
         st.header("第一阶段：前测自答")
         st.info(st.session_state.q_main['content'])
