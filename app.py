@@ -90,6 +90,13 @@ st.markdown("""
         font-weight: bold; 
         margin: 20px 0;
     }
+    .finish-text {
+        text-align: right; 
+        color: #28a745; 
+        font-weight: bold; 
+        font-size: 26px; 
+        margin-top: 50px;
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -110,7 +117,7 @@ def get_ai_instruction(ai_type, question_obj):
         return f"【指令】：针对题目：{content}，直接给出正确答案，{length}"
     else:
         scaffold = random.choice(question_obj['scaffolding_prompts'])
-        return f"【指令】：针对题目：{content}，请根据线索：“{scaffold}”，启发我思考并引导我找出正确答案，{length}，并根据思考方向给出三个启发性问题引导我继续深入思考"
+        return f"【指令】：针对题目：{content}，请根据线索：“{scaffold}”，启发我思考并引导我找出正确答案，{length}并根据思考方向给出三个启发性问题引导我继续深入思考"
 
 def next_stage():
     if st.session_state.stage < len(STAGES) - 1:
@@ -211,18 +218,12 @@ elif curr_stage_name == "问卷阶段":
     
     if st.button("下一步"):
         next_stage()
+    
+    # 右下角添加恭喜语
+    st.markdown('<div class="finish-text">恭喜你已完成本实验</div>', unsafe_allow_html=True)
 
 # --- 7. 实验完成 ---
 elif curr_stage_name == "实验完成":
     st.balloons()
-    st.header("🎉 实验已结束！")
-    final_payload = {
-        "info": st.session_state.user_info, 
-        "main_q_id": st.session_state.q_main['id'], 
-        "transfer_q_id": st.session_state.q_transfer['id'], 
-        "note": "Paper-based data recording",
-        "time": datetime.now().strftime("%Y-%m-%d %H:%M")
-    }
-    code = base64.b64encode(json.dumps(final_payload, ensure_ascii=False).encode()).decode()
-    st.warning("请将下方凭证发给老师：")
-    st.code(code, wrap_lines=True)
+    st.header("🎉 实验已全部结束！")
+    st.success("感谢参与，你可以关闭本页面了。")
