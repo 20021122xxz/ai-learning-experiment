@@ -56,32 +56,14 @@ Q_D = {
     ]
 }
 
-
-# 分别定义 AI互动环节题库 和 迁移环节题库
 MAIN_QUESTION_BANK = [Q_A, Q_B]
 TRANSFER_QUESTION_BANK = [Q_C, Q_D]
-
-# 1. 定义默认选项
-DEFAULT_OPTIONS = ["完全没有", "较少", "一般", "较多", "非常多"]
-
-# 2. 将选项和维度直接写入每个字典中（严格按你的 8 道题）
-SURVEY_CORPUS = [
-    {"dim": "任务趣味性", "qs": ["你觉得这项任务在多大程度上有趣"], "options": DEFAULT_OPTIONS},
-    {"dim": "任务难度", "qs": ["你觉得这项任务在多大程度上困难"], "options": DEFAULT_OPTIONS},
-    {"dim": "参与积极性", "qs": ["你在多大程度上积极寻求解决答案"], "options": DEFAULT_OPTIONS},
-    {"dim": "协作贡献度", "qs": ["假设最终想法的比例分别由你和AI贡献，你觉得你自己的贡献有多少"], "options": ["0-20%", "21-40%", "41-60%", "61-80%", "81-100%"]}, 
-    {"dim": "认知负荷", "qs": ["你在这项任务上投入了多大程度的脑力"], "options": DEFAULT_OPTIONS},
-    {"dim": "AI实用性", "qs": ["AI在解决这个任务时对你有多大的用处"], "options": DEFAULT_OPTIONS},
-    {"dim": "AI易用性", "qs": ["你是否觉得AI易于使用"], "options": ["非常难用", "不太好用", "一般", "比较好用", "非常易用"]},
-    {"dim": "交互清晰度", "qs": ["我对AI的交互过程感到清晰且易于理解"], "options": ["非常模糊", "比较模糊", "一般", "比较清晰", "非常清晰"]}
-]
 
 # ==========================================
 # 2. 页面配置与初始化
 # ==========================================
 st.set_page_config(page_title="AI学习干预实验平台", layout="centered")
 
-# 大字号样式
 st.markdown("""
     <style>
     html, body, [class*="css"] { font-size: 20px !important; }
@@ -89,6 +71,25 @@ st.markdown("""
     .stButton>button { font-size: 24px !important; height: 3em !important; width: 100% !important; background-color: #f0f2f6 !important; }
     [data-testid="stMetricValue"] { font-size: 40px !important; }
     .stMarkdown p { font-size: 22px !important; }
+    .instruction-box { 
+        padding: 30px; 
+        background-color: #f8f9fa; 
+        border: 2px solid #dee2e6;
+        border-radius: 10px;
+        color: #333; 
+        font-weight: bold; 
+        margin: 20px 0;
+        line-height: 1.8;
+        font-size: 24px !important;
+    }
+    .warning-box {
+        padding: 20px; 
+        background-color: #fff3cd; 
+        border-left: 5px solid #ffc107; 
+        color: #856404; 
+        font-weight: bold; 
+        margin: 20px 0;
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -96,13 +97,10 @@ if 'stage' not in st.session_state:
     st.session_state.stage = 0
     st.session_state.start_time = None
     st.session_state.responses = {}
-    
     st.session_state.q_main = random.choice(MAIN_QUESTION_BANK)
     st.session_state.q_transfer = random.choice(TRANSFER_QUESTION_BANK)
-    
     st.session_state.ai_instruction = ""
 
-# 阶段列表
 STAGES = ["信息填写", "前测阶段", "AI互动", "后测阶段", "迁移阶段", "问卷阶段", "实验完成"]
 
 def get_ai_instruction(ai_type, question_obj):
@@ -142,83 +140,77 @@ def run_timer(duration_min):
 # ==========================================
 curr_stage_name = STAGES[st.session_state.stage]
 
-# --- 1. 信息填写 ---
+# --- 1. 信息填写 (首页) ---
 if curr_stage_name == "信息填写":
     st.title("🧪 AI学习干预实验平台")
-    u_id = st.text_input("被试编号")
-    u_grade = st.selectbox("所在年级", ["小学四年级", "小学五年级", "小学六年级", "初中一年级", "初中二年级"])
-    u_ai = st.selectbox("AI 分组类型", ["指导型AI", "支持型AI"])
-    if st.button("下一步"):
-        if u_id:
-            st.session_state.user_info = {"id": u_id, "grade": u_grade, "ai_type": u_ai}
-            st.session_state.ai_instruction = get_ai_instruction(u_ai, st.session_state.q_main)
-            next_stage()
-        else: 
-            st.error("请填写编号")
+    
+    st.markdown('''
+        <div class="instruction-box">
+        💡 <b>操作指引：</b><br>
+        请在答题卡上填写自己的姓名、性别、学号、班级，并根据答题卡上已选的AI类型选择下方的AI类型，完成后点击<b>“开始”</b>进入实验。
+        </div>
+    ''', unsafe_allow_html=True)
+    
+    u_ai = st.selectbox("请选择您的 AI 分组类型", ["指导型AI", "支持型AI"])
+    
+    if st.button("开始"):
+        st.session_state.user_info = {"ai_type": u_ai}
+        st.session_state.ai_instruction = get_ai_instruction(u_ai, st.session_state.q_main)
+        next_stage()
 
-# --- 2. 前测阶段 (5min) ---
+# --- 2. 前测阶段 (4min) ---
 elif curr_stage_name == "前测阶段":
     st.header("第一阶段：前测自答")
     st.info(st.session_state.q_main['content'])
-    st.session_state.responses['pre_test'] = st.text_area("请写下思考：", key="ans_pre", height=250)
+    
+    st.markdown('<div class="warning-box">📝 请将自己的答案写在答题卡上，记得注意左侧剩余时间，倒计时结束将强制跳转进入下一阶段的测试。</div>', unsafe_allow_html=True)
+    
     if st.button("下一步"): next_stage()
-    run_timer(5)
+    run_timer(4)
 
-# --- 3. AI互动阶段 (3min) ---
+# --- 3. AI互动阶段 (5min) ---
 elif curr_stage_name == "AI互动":
     st.header("第二阶段：AI 互动辅助")
-    st.error("📢 重要提示：请用纸笔记录你认为的答案重点，并在倒计时结束之前返回实验页面。倒计时结束会强制继续下一个环节输入你整理过后的答案，且不可返回原页面。")
+    st.error("📢 重要提示：请将自己认为有用的答案在草稿纸上做好记录，方便下一阶段整理答案。并在倒计时结束之前返回实验页面。倒计时结束会强制跳转，且不可返回原页面。")
     st.code(st.session_state.ai_instruction, language=None)
     st.link_button("🚀 先点击指令右侧复制内容，再点击此键跳转豆包 AI", "https://www.doubao.com/")
     st.divider()
     if st.button("下一步"): next_stage()
-    run_timer(3)
+    run_timer(5)
 
-# --- 4. 后测阶段 (5min) ---
+# --- 4. 后测阶段 (4min) ---
 elif curr_stage_name == "后测阶段":
     st.header("第三阶段：后测整理")
     st.info(st.session_state.q_main['content'])
-    st.session_state.responses['post_test'] = st.text_area("请写下最终答案：", key="ans_post", height=350)
+    
+    st.markdown('<div class="warning-box">📝 请将自己的答案写在答题卡上，记得注意左侧剩余时间，倒计时结束将强制跳转进入下一阶段的测试。</div>', unsafe_allow_html=True)
+    
     if st.button("下一步"): next_stage()
-    run_timer(5)
+    run_timer(4)
 
-# --- 5. 迁移阶段 (5min) ---
+# --- 5. 迁移阶段 (4min) ---
 elif curr_stage_name == "迁移阶段":
     st.header("第四阶段：迁移能力测试")
     st.success(st.session_state.q_transfer['content'])
-    st.session_state.responses['transfer_test'] = st.text_area("请独立作答：", key="ans_transfer", height=300)
+    
+    st.markdown('<div class="warning-box">📝 请将自己的答案写在答题卡上，记得注意左侧剩余时间，倒计时结束将强制跳转进入下一阶段的测试。</div>', unsafe_allow_html=True)
+    
     if st.button("下一步"): next_stage()
-    run_timer(5)
+    run_timer(4)
 
 # --- 6. 问卷阶段 ---
 elif curr_stage_name == "问卷阶段":
     st.header("第五阶段：反馈问卷")
-    with st.form("survey_form"):
-        results = {}
-        for idx, section in enumerate(SURVEY_CORPUS):
-            for q in section['qs']:
-                current_options = ["👈请滑动选择"] + section['options']
-                default_val = "👈请滑动选择"
-                
-                # 大字号渲染问题
-                st.markdown(f"<div style='font-size: 24px; font-weight: bold; margin-top: 25px; margin-bottom: 10px;'>{q}</div>", unsafe_allow_html=True)
-                
-                # 带防止缓存 key 和必选校验的滑块
-                results[q] = st.select_slider(
-                    label=q, 
-                    options=current_options, 
-                    value=default_val,
-                    label_visibility="collapsed",
-                    key=f"force_new_{idx}" 
-                )
-                
-        submit_clicked = st.form_submit_button("下一步")
-        if submit_clicked:
-            if "👈请滑动选择" in results.values():
-                st.error("⚠️ 还有未完成的题目，请滑动所有滑块进行选择后再提交！")
-            else:
-                st.session_state.responses['survey'] = results
-                next_stage()
+    
+    st.markdown('''
+        <div class="instruction-box" style="text-align: center; background-color: #e3f2fd; border-color: #2196f3;">
+        📑 <b>请翻转答题卡至背面完成反馈问卷</b><br><br>
+        <span style="font-size: 18px; color: #666;">完成后点击下方按钮结束实验</span>
+        </div>
+    ''', unsafe_allow_html=True)
+    
+    if st.button("下一步"):
+        next_stage()
 
 # --- 7. 实验完成 ---
 elif curr_stage_name == "实验完成":
@@ -226,9 +218,9 @@ elif curr_stage_name == "实验完成":
     st.header("🎉 实验已结束！")
     final_payload = {
         "info": st.session_state.user_info, 
-        "data": st.session_state.responses,
         "main_q_id": st.session_state.q_main['id'], 
         "transfer_q_id": st.session_state.q_transfer['id'], 
+        "note": "Paper-based data recording",
         "time": datetime.now().strftime("%Y-%m-%d %H:%M")
     }
     code = base64.b64encode(json.dumps(final_payload, ensure_ascii=False).encode()).decode()
