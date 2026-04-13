@@ -202,7 +202,6 @@ elif curr_stage_name == "问卷阶段":
     ''', unsafe_allow_html=True)
     if st.button("完成实验"):
         next_stage()
-    st.markdown('<div class="finish-text">实验已完成，请等待老师指令</div>', unsafe_allow_html=True)
 
 # --- 7. 实验完成 ---
 elif curr_stage_name == "实验完成":
