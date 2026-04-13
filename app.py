@@ -114,10 +114,10 @@ def get_ai_instruction(ai_type, question_obj):
     content = question_obj['content']
     length = "字数要求400-500字。"
     if ai_type == "指导型AI":
-        return f"【指令】：针对题目：{content}，直接给出正确答案，{length}"
+        return f"【指令】：针对题目：{content}直接给出答案，{length}"
     else:
         scaffold = random.choice(question_obj['scaffolding_prompts'])
-        return f"【指令】：针对题目：{content}，请根据线索：“{scaffold}”，启发我思考并引导我找出正确答案，{length}并根据思考方向给出三个启发性问题引导我继续深入思考"
+        return f"【指令】：针对题目：{content}请根据线索：“{scaffold}”，启发我思考并引导我找出答案，{length}并根据思考方向给出三个启发性问题引导我继续深入思考"
 
 def next_stage():
     if st.session_state.stage < len(STAGES) - 1:
