@@ -95,7 +95,6 @@ if 'stage' not in st.session_state:
     st.session_state.q_transfer = random.choice(TRANSFER_QUESTION_BANK)
     st.session_state.ai_instruction = ""
 
-# 删掉了原本的“实验完成”阶段，直接在问卷阶段结束
 STAGES = ["信息填写", "前测阶段", "AI互动", "后测阶段", "迁移阶段", "问卷阶段"]
 
 def get_ai_instruction(ai_type, question_obj):
@@ -114,7 +113,7 @@ def next_stage():
         st.rerun()
 
 # ==========================================
-# 3. 核心计时器 (无人工干预跳转)
+# 3. 核心计时器 (用于自动跳转)
 # ==========================================
 def run_timer(duration_min):
     total_sec = duration_min * 60
@@ -136,27 +135,29 @@ def run_timer(duration_min):
     st.rerun()
 
 # ==========================================
-# 4. 实验流程
+# 4. 实验流程 (严格分区，确保按钮不越界)
 # ==========================================
 curr_stage_name = STAGES[st.session_state.stage]
 
-# --- 1. 信息填写 (开始环节) ---
+# --- 阶段 1. 信息填写 (按钮唯一出现的页面) ---
 if curr_stage_name == "信息填写":
     st.title("🧪 AI学习干预实验平台")
-    st.markdown('<div class="instruction-box">💡 请填写基本信息并选择AI分组，点击“开始”进入实验。</div>', unsafe_allow_html=True)
+    st.markdown('<div class="instruction-box">💡 请填写基本信息并选择AI分组，点击下方的按钮开始。</div>', unsafe_allow_html=True)
     u_ai = st.selectbox("请选择您的 AI 分组类型", ["指导型AI", "支持型AI"])
-    if st.button("开始实验"):
+    
+    # 将“开始实验”改名为“开始”
+    if st.button("开始"): 
         st.session_state.ai_instruction = get_ai_instruction(u_ai, st.session_state.q_main)
         next_stage()
 
-# --- 2. 前测阶段 (4min, 强制等待) ---
+# --- 阶段 2. 前测阶段 (4min, 无按钮) ---
 elif curr_stage_name == "前测阶段":
     st.header("第一阶段：前测自答")
     st.info(st.session_state.q_main['content'])
     st.markdown('<div class="warning-box">📝 请在答题卡上作答。倒计时结束将自动进入下一环节。</div>', unsafe_allow_html=True)
     run_timer(4)
 
-# --- 3. AI互动阶段 (5min, 强制等待) ---
+# --- 阶段 3. AI互动阶段 (5min, 无按钮) ---
 elif curr_stage_name == "AI互动":
     st.header("第二阶段：AI 互动辅助")
     st.error("📢 请复制下方指令并在AI窗口进行互动，记录有用内容。")
@@ -165,23 +166,23 @@ elif curr_stage_name == "AI互动":
     st.markdown('<div class="warning-box">⏳ 请注意侧边栏时间，倒计时结束将自动跳转。</div>', unsafe_allow_html=True)
     run_timer(5)
 
-# --- 4. 后测阶段 (4min, 强制等待) ---
+# --- 阶段 4. 后测阶段 (4min, 无按钮) ---
 elif curr_stage_name == "后测阶段":
     st.header("第三阶段：后测整理")
     st.info(st.session_state.q_main['content'])
     st.markdown('<div class="warning-box">📝 请在答题卡上整理最终答案。倒计时结束将自动跳转。</div>', unsafe_allow_html=True)
     run_timer(4)
 
-# --- 5. 迁移阶段 (4min, 强制等待) ---
+# --- 阶段 5. 迁移阶段 (4min, 无按钮) ---
 elif curr_stage_name == "迁移阶段":
     st.header("第四阶段：迁移能力测试")
     st.success(st.session_state.q_transfer['content'])
     st.markdown('<div class="warning-box">📝 请针对新问题在答题卡上作答。倒计时结束将自动跳转。</div>', unsafe_allow_html=True)
     run_timer(4)
 
-# --- 6. 问卷阶段 (终点环节) ---
+# --- 阶段 6. 问卷阶段 (实验终点) ---
 elif curr_stage_name == "问卷阶段":
-    st.balloons() # 自动弹出庆祝气球
+    st.balloons()
     st.header("🎉 实验已完成")
     st.markdown('''
         <div class="instruction-box" style="text-align: center; background-color: #e3f2fd; border-color: #2196f3;">
