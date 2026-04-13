@@ -110,10 +110,10 @@ def get_ai_instruction(ai_type, question_obj):
     content = question_obj['content']
     length = "字数要求400-500字。"
     if ai_type == "指导型AI":
-        return f"【指令】：针对题目：{content}，直接给出正确答案，{length}"
+        return f"【指令】：针对题目：{content}，直接给出答案，{length}"
     else:
         scaffold = random.choice(question_obj['scaffolding_prompts'])
-        return f"【指令】：针对题目：{content}，请根据线索：“{scaffold}”，启发我思考并引导我找出正确答案，{length}，并根据思考方向给出三个启发性问题引导我继续深入思考"
+        return f"【指令】：针对题目：{content}，请根据线索：“{scaffold}”，启发我思考并引导我找出答案，{length}，并根据思考方向给出三个启发性问题引导我继续深入思考"
 
 def next_stage():
     if st.session_state.stage < len(STAGES) - 1:
@@ -133,14 +133,9 @@ def run_timer(duration_min):
     remaining = max(0, int(total_sec - elapsed))
     
     st.sidebar.metric("剩余时间", f"{remaining // 60:02d}:{remaining % 60:02d}")
-    
-    # 使用 empty 容器作为警告信息的占位符
-    msg_slot = st.empty()
-    
+
     if 0 < remaining <= 30:
         msg_slot.warning(f"⚠️ 注意：还剩 {remaining} 秒，系统即将自动跳转！")
-    else:
-        msg_slot.empty()
 
     if remaining <= 0:
         next_stage()
@@ -173,7 +168,7 @@ elif curr_stage_name == "前测阶段":
     st.header("第一阶段：前测自答")
     st.info(st.session_state.q_main['content'])
     st.markdown('<div class="warning-box">📝 请将自己的答案写在答题卡上。倒计时结束将自动进入下一阶段。</div>', unsafe_allow_html=True)
-    run_timer(0.1)
+    run_timer(4)
 
 # --- 3. AI互动阶段 (5min) ---
 elif curr_stage_name == "AI互动":
@@ -182,21 +177,21 @@ elif curr_stage_name == "AI互动":
     st.code(st.session_state.ai_instruction, language=None)
     st.link_button("🚀 先复制上方指令，再点击跳转豆包 AI", "https://www.doubao.com/")
     st.divider()
-    run_timer(0.1)
+    run_timer(5)
 
 # --- 4. 后测阶段 (4min) ---
 elif curr_stage_name == "后测阶段":
     st.header("第三阶段：后测整理")
     st.info(st.session_state.q_main['content'])
     st.markdown('<div class="warning-box">📝 请将整合后的答案写在答题卡上。倒计时结束将自动跳转。</div>', unsafe_allow_html=True)
-    run_timer(0.1)
+    run_timer(4)
 
 # --- 5. 迁移阶段 (4min) ---
 elif curr_stage_name == "迁移阶段":
     st.header("第四阶段：迁移能力测试")
     st.success(st.session_state.q_transfer['content'])
     st.markdown('<div class="warning-box">📝 请将新问题的答案写在答题卡上。倒计时结束将自动跳转。</div>', unsafe_allow_html=True)
-    run_timer(0.1)
+    run_timer(5)
 
 # --- 6. 问卷阶段 ---
 elif curr_stage_name == "问卷阶段":
