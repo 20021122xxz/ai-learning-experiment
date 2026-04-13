@@ -1,9 +1,6 @@
 import streamlit as st
 import time
 import random
-import json
-import base64
-from datetime import datetime
 
 # ==========================================
 # 1. 语料库
@@ -125,19 +122,29 @@ def next_stage():
         st.rerun()
 
 # ==========================================
-# 3. 核心计时器
+# 3. 核心计时器 (防止提示信息堆叠版)
 # ==========================================
 def run_timer(duration_min):
     total_sec = duration_min * 60
     if st.session_state.start_time is None:
         st.session_state.start_time = time.time()
+    
     elapsed = time.time() - st.session_state.start_time
     remaining = max(0, int(total_sec - elapsed))
+    
     st.sidebar.metric("剩余时间", f"{remaining // 60:02d}:{remaining % 60:02d}")
+    
+    # 使用 empty 容器作为警告信息的占位符
+    msg_slot = st.empty()
+    
     if 0 < remaining <= 30:
-        st.warning(f"⚠️ 注意：还剩 {remaining} 秒，系统即将自动跳转！")
+        msg_slot.warning(f"⚠️ 注意：还剩 {remaining} 秒，系统即将自动跳转！")
+    else:
+        msg_slot.empty()
+
     if remaining <= 0:
         next_stage()
+    
     time.sleep(1)
     st.rerun()
 
@@ -202,6 +209,7 @@ elif curr_stage_name == "问卷阶段":
     ''', unsafe_allow_html=True)
     if st.button("完成实验"):
         next_stage()
+    st.markdown('<div class="finish-text">实验已完成，请等待老师指令</div>', unsafe_allow_html=True)
 
 # --- 7. 实验完成 ---
 elif curr_stage_name == "实验完成":
