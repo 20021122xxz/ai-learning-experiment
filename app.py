@@ -61,30 +61,14 @@ TRANSFER_QUESTION_BANK = [Q_C, Q_D]
 # ==========================================
 st.set_page_config(page_title="AI学习干预实验平台", layout="centered")
 
+# 样式美化
 st.markdown("""
     <style>
     html, body, [class*="css"] { font-size: 20px !important; }
     .stButton>button { font-size: 24px !important; height: 3em !important; width: 100% !important; background-color: #f0f2f6 !important; }
     [data-testid="stMetricValue"] { font-size: 40px !important; }
-    .instruction-box { 
-        padding: 30px; 
-        background-color: #f8f9fa; 
-        border: 2px solid #dee2e6;
-        border-radius: 10px;
-        color: #333; 
-        font-weight: bold; 
-        margin: 20px 0;
-        line-height: 1.8;
-        font-size: 24px !important;
-    }
-    .warning-box {
-        padding: 20px; 
-        background-color: #fff3cd; 
-        border-left: 5px solid #ffc107; 
-        color: #856404; 
-        font-weight: bold; 
-        margin: 20px 0;
-    }
+    .instruction-box { padding: 30px; background-color: #f8f9fa; border: 2px solid #dee2e6; border-radius: 10px; font-weight: bold; margin: 20px 0; line-height: 1.8; font-size: 24px !important; }
+    .warning-box { padding: 20px; background-color: #fff3cd; border-left: 5px solid #ffc107; color: #856404; font-weight: bold; margin: 20px 0; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -107,13 +91,12 @@ def get_ai_instruction(ai_type, question_obj):
         return f"【指令】：针对题目：{content}请根据线索：“{scaffold}”，启发我思考并引导我找出答案，{length}并根据思考方向给出三个启发性问题引导我继续深入思考"
 
 def next_stage():
-    if st.session_state.stage < len(STAGES) - 1:
-        st.session_state.stage += 1
-        st.session_state.start_time = None
-        st.rerun()
+    st.session_state.stage += 1
+    st.session_state.start_time = None
+    st.rerun()
 
 # ==========================================
-# 3. 核心计时器 (用于自动跳转)
+# 3. 核心计时器
 # ==========================================
 def run_timer(duration_min):
     total_sec = duration_min * 60
@@ -122,9 +105,7 @@ def run_timer(duration_min):
     elapsed = time.time() - st.session_state.start_time
     remaining = max(0, int(total_sec - elapsed))
     
-    # 侧边栏显示倒计时
     st.sidebar.metric("剩余时间", f"{remaining // 60:02d}:{remaining % 60:02d}")
-    
     if 0 < remaining <= 30:
         st.sidebar.warning(f"⚠️ 注意：还剩 {remaining} 秒，即将自动跳转！")
     
@@ -135,59 +116,62 @@ def run_timer(duration_min):
     st.rerun()
 
 # ==========================================
-# 4. 实验流程 (严格分区，确保按钮不越界)
+# 4. 实验流程 (使用 main_container 强制刷新内容)
 # ==========================================
+main_placeholder = st.empty() # 创建一个空容器
 curr_stage_name = STAGES[st.session_state.stage]
 
-# --- 阶段 1. 信息填写 (按钮唯一出现的页面) ---
-if curr_stage_name == "信息填写":
-    st.title("🧪 AI学习干预实验平台")
-    st.markdown('<div class="instruction-box">💡 请填写基本信息并选择AI分组，点击下方的按钮开始。</div>', unsafe_allow_html=True)
-    u_ai = st.selectbox("请选择您的 AI 分组类型", ["指导型AI", "支持型AI"])
+with main_placeholder.container(): # 所有内容都画在容器里
     
-    # 将“开始实验”改名为“开始”
-    if st.button("开始"): 
-        st.session_state.ai_instruction = get_ai_instruction(u_ai, st.session_state.q_main)
-        next_stage()
+    # --- 阶段 1. 信息填写 (只有这里有按钮) ---
+    if curr_stage_name == "信息填写":
+        st.title("🧪 AI学习干预实验平台")
+        st.markdown('<div class="instruction-box">💡 请填写基本信息并选择AI分组，点击下方的按钮开始。</div>', unsafe_allow_html=True)
+        u_ai = st.selectbox("请选择您的 AI 分组类型", ["指导型AI", "支持型AI"])
+        
+        # 按钮名字改为“开始”
+        if st.button("开始"): 
+            st.session_state.ai_instruction = get_ai_instruction(u_ai, st.session_state.q_main)
+            next_stage()
 
-# --- 阶段 2. 前测阶段 (4min, 无按钮) ---
-elif curr_stage_name == "前测阶段":
-    st.header("第一阶段：前测自答")
-    st.info(st.session_state.q_main['content'])
-    st.markdown('<div class="warning-box">📝 请在答题卡上作答。倒计时结束将自动进入下一环节。</div>', unsafe_allow_html=True)
-    run_timer(4)
+    # --- 阶段 2. 前测阶段 (无按钮) ---
+    elif curr_stage_name == "前测阶段":
+        st.header("第一阶段：前测自答")
+        st.info(st.session_state.q_main['content'])
+        st.markdown('<div class="warning-box">📝 请在答题卡上作答。倒计时结束将自动进入下一环节。</div>', unsafe_allow_html=True)
+        run_timer(4)
 
-# --- 阶段 3. AI互动阶段 (5min, 无按钮) ---
-elif curr_stage_name == "AI互动":
-    st.header("第二阶段：AI 互动辅助")
-    st.error("📢 请复制下方指令并在AI窗口进行互动，记录有用内容。")
-    st.code(st.session_state.ai_instruction, language=None)
-    st.link_button("🚀 跳转至豆包 AI", "https://www.doubao.com/")
-    st.markdown('<div class="warning-box">⏳ 请注意侧边栏时间，倒计时结束将自动跳转。</div>', unsafe_allow_html=True)
-    run_timer(5)
+    # --- 阶段 3. AI互动阶段 (无按钮) ---
+    elif curr_stage_name == "AI互动":
+        st.header("第二阶段：AI 互动辅助")
+        st.error("📢 请复制下方指令并在AI窗口进行互动，并在倒计时结束前回到本页面。")
+        st.code(st.session_state.ai_instruction, language=None)
+        st.link_button("🚀 跳转至豆包 AI", "https://www.doubao.com/")
+        st.markdown('<div class="warning-box">⏳ 倒计时结束将自动跳转，请注意左侧时间。</div>', unsafe_allow_html=True)
+        run_timer(5)
 
-# --- 阶段 4. 后测阶段 (4min, 无按钮) ---
-elif curr_stage_name == "后测阶段":
-    st.header("第三阶段：后测整理")
-    st.info(st.session_state.q_main['content'])
-    st.markdown('<div class="warning-box">📝 请在答题卡上整理最终答案。倒计时结束将自动跳转。</div>', unsafe_allow_html=True)
-    run_timer(4)
+    # --- 阶段 4. 后测阶段 (无按钮) ---
+    elif curr_stage_name == "后测阶段":
+        st.header("第三阶段：后测整理")
+        st.info(st.session_state.q_main['content'])
+        st.markdown('<div class="warning-box">📝 请在答题卡上整理最终答案。倒计时结束将自动跳转。</div>', unsafe_allow_html=True)
+        run_timer(4)
 
-# --- 阶段 5. 迁移阶段 (4min, 无按钮) ---
-elif curr_stage_name == "迁移阶段":
-    st.header("第四阶段：迁移能力测试")
-    st.success(st.session_state.q_transfer['content'])
-    st.markdown('<div class="warning-box">📝 请针对新问题在答题卡上作答。倒计时结束将自动跳转。</div>', unsafe_allow_html=True)
-    run_timer(4)
+    # --- 阶段 5. 迁移阶段 (无按钮) ---
+    elif curr_stage_name == "迁移阶段":
+        st.header("第四阶段：迁移能力测试")
+        st.success(st.session_state.q_transfer['content'])
+        st.markdown('<div class="warning-box">📝 请针对新问题在答题卡上作答。倒计时结束将自动跳转。</div>', unsafe_allow_html=True)
+        run_timer(4)
 
-# --- 阶段 6. 问卷阶段 (实验终点) ---
-elif curr_stage_name == "问卷阶段":
-    st.balloons()
-    st.header("🎉 实验已完成")
-    st.markdown('''
-        <div class="instruction-box" style="text-align: center; background-color: #e3f2fd; border-color: #2196f3;">
-        📑 <b>最后一步：请翻转答题卡至背面完成反馈问卷</b><br><br>
-        <span style="font-size: 22px; color: #28a745; font-weight: bold;">感谢参与！全部完成后，您现在可以关闭本页面。</span>
-        </div>
-    ''', unsafe_allow_html=True)
-    st.success("实验流程已结束。")
+    # --- 阶段 6. 问卷阶段 (终点，无按钮) ---
+    elif curr_stage_name == "问卷阶段":
+        st.balloons()
+        st.header("🎉 实验已完成")
+        st.markdown('''
+            <div class="instruction-box" style="text-align: center; background-color: #e3f2fd; border-color: #2196f3;">
+            📑 <b>最后一步：请翻转答题卡至背面完成反馈问卷</b><br><br>
+            <span style="font-size: 22px; color: #28a745; font-weight: bold;">感谢参与！全部完成后，您现在可以关闭本页面。</span>
+            </div>
+        ''', unsafe_allow_html=True)
+        st.success("实验流程已结束。")
