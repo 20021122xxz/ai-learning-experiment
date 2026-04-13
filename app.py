@@ -1,9 +1,12 @@
 import streamlit as st
 import time
 import random
+import json
+import base64
+from datetime import datetime
 
 # ==========================================
-# 1. 语料库 (数据保持不变)
+# 1. 语料库
 # ==========================================
 Q_A = {
     "id": "A",
@@ -57,7 +60,7 @@ MAIN_QUESTION_BANK = [Q_A, Q_B]
 TRANSFER_QUESTION_BANK = [Q_C, Q_D]
 
 # ==========================================
-# 2. 页面配置与 CSS
+# 2. 页面配置与初始化
 # ==========================================
 st.set_page_config(page_title="AI学习干预实验平台", layout="centered")
 
@@ -97,9 +100,6 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# ==========================================
-# 3. 状态初始化与核心方法
-# ==========================================
 if 'stage' not in st.session_state:
     st.session_state.stage = 0
     st.session_state.start_time = None
@@ -107,7 +107,8 @@ if 'stage' not in st.session_state:
     st.session_state.q_main = random.choice(MAIN_QUESTION_BANK)
     st.session_state.q_transfer = random.choice(TRANSFER_QUESTION_BANK)
     st.session_state.ai_instruction = ""
-    st.session_state.user_info = {}
+
+STAGES = ["信息填写", "前测阶段", "AI互动", "后测阶段", "迁移阶段", "问卷阶段", "实验完成"]
 
 def get_ai_instruction(ai_type, question_obj):
     content = question_obj['content']
@@ -119,109 +120,118 @@ def get_ai_instruction(ai_type, question_obj):
         return f"【指令】：针对题目：{content}，请根据线索：“{scaffold}”，启发我思考并引导我找出正确答案，{length}，并根据思考方向给出三个启发性问题引导我继续深入思考"
 
 def next_stage():
-    st.session_state.stage += 1
-    st.session_state.start_time = None
-    st.rerun()
+    if st.session_state.stage < len(STAGES) - 1:
+        st.session_state.stage += 1
+        st.session_state.start_time = None
+        st.rerun()
 
+# ==========================================
+# 3. 核心计时器
+# ==========================================
 def run_timer(duration_min):
     total_sec = duration_min * 60
     if st.session_state.start_time is None:
         st.session_state.start_time = time.time()
-        
     elapsed = time.time() - st.session_state.start_time
     remaining = max(0, int(total_sec - elapsed))
-    
     st.sidebar.metric("剩余时间", f"{remaining // 60:02d}:{remaining % 60:02d}")
-    
     if 0 < remaining <= 30:
         st.warning(f"⚠️ 注意：还剩 {remaining} 秒，系统即将自动跳转！")
-        
     if remaining <= 0:
         next_stage()
-    else:
-        time.sleep(1)
-        st.rerun()
+    time.sleep(1)
+    st.rerun()
 
 # ==========================================
-# 4. 模块化视图函数 (彻底解决按钮残留)
+# 4. 实验流程
 # ==========================================
-def render_stage_0():
+curr_stage_name = STAGES[st.session_state.stage]
+
+# --- 1. 信息填写 (首页) ---
+if curr_stage_name == "信息填写":
     st.title("🧪 AI学习干预实验平台")
+    
     st.markdown('''
         <div class="instruction-box">
         💡 <b>操作指引：</b><br>
-        请在答题卡上填写自己的姓名、性别、学号、班级，并根据答题卡上已选的AI类型选择下方的AI类型，完成后点击<b>“开始”</b>进入实验。
+        请在答题卡上填写自己的姓名、性别、学号、班级，并根据答题卡上已选的AI类型，勾选下方的对应选项，<b>选择后将自动进入实验</b>。
         </div>
     ''', unsafe_allow_html=True)
     
-    u_ai = st.selectbox("请选择您的 AI 分组类型", ["指导型AI", "支持型AI"])
+    st.markdown("**请选择您的 AI 分组类型：**")
     
-    if st.button("开始"):
-        st.session_state.user_info = {"ai_type": u_ai}
-        st.session_state.ai_instruction = get_ai_instruction(u_ai, st.session_state.q_main)
+    # 使用 checkbox 展现明面上的“小方框”
+    c1 = st.checkbox("指导型AI")
+    c2 = st.checkbox("支持型AI")
+    
+    # 一旦用户勾选任意一个，立刻保存信息并跳转到下一阶段
+    if c1:
+        st.session_state.user_info = {"ai_type": "指导型AI"}
+        st.session_state.ai_instruction = get_ai_instruction("指导型AI", st.session_state.q_main)
         next_stage()
-
-def render_stage_1():
+    elif c2:
+        st.session_state.user_info = {"ai_type": "支持型AI"}
+        st.session_state.ai_instruction = get_ai_instruction("支持型AI", st.session_state.q_main)
+        next_stage()
+# --- 2. 前测阶段 (4min) ---
+elif curr_stage_name == "前测阶段":
     st.header("第一阶段：前测自答")
     st.info(st.session_state.q_main['content'])
+    
     st.markdown('<div class="warning-box">📝 请将自己的答案写在答题卡上，记得注意左侧剩余时间，倒计时结束将强制跳转进入下一阶段的测试。</div>', unsafe_allow_html=True)
+    
+    if st.button("下一步"): next_stage()
     run_timer(4)
 
-def render_stage_2():
+# --- 3. AI互动阶段 (5min) ---
+elif curr_stage_name == "AI互动":
     st.header("第二阶段：AI 互动辅助")
     st.error("📢 重要提示：请将自己认为有用的答案在草稿纸上做好记录，方便下一阶段整理答案。并在倒计时结束之前返回实验页面。倒计时结束会强制跳转，且不可返回原页面。")
     st.code(st.session_state.ai_instruction, language=None)
     st.link_button("🚀 先点击指令右侧复制内容，再点击此键跳转豆包 AI", "https://www.doubao.com/")
     st.divider()
+    if st.button("下一步"): next_stage()
     run_timer(5)
 
-def render_stage_3():
+# --- 4. 后测阶段 (4min) ---
+elif curr_stage_name == "后测阶段":
     st.header("第三阶段：后测整理")
     st.info(st.session_state.q_main['content'])
+    
     st.markdown('<div class="warning-box">📝 请将自己的答案写在答题卡上，记得注意左侧剩余时间，倒计时结束将强制跳转进入下一阶段的测试。</div>', unsafe_allow_html=True)
+    
+    if st.button("下一步"): next_stage()
     run_timer(4)
 
-def render_stage_4():
+# --- 5. 迁移阶段 (4min) ---
+elif curr_stage_name == "迁移阶段":
     st.header("第四阶段：迁移能力测试")
     st.success(st.session_state.q_transfer['content'])
+    
     st.markdown('<div class="warning-box">📝 请将自己的答案写在答题卡上，记得注意左侧剩余时间，倒计时结束将强制跳转进入下一阶段的测试。</div>', unsafe_allow_html=True)
+    
+    if st.button("下一步"): next_stage()
     run_timer(4)
 
-def render_stage_5():
+# --- 6. 问卷阶段 ---
+elif curr_stage_name == "问卷阶段":
     st.header("第五阶段：反馈问卷")
+    
     st.markdown('''
         <div class="instruction-box" style="text-align: center; background-color: #e3f2fd; border-color: #2196f3;">
         📑 <b>请翻转答题卡至背面完成反馈问卷</b><br><br>
         <span style="font-size: 18px; color: #666;">完成后点击下方按钮结束实验</span>
         </div>
     ''', unsafe_allow_html=True)
+    
     if st.button("下一步"):
         next_stage()
+    
+    # 右下角添加恭喜语
+    st.markdown('<div class="finish-text">恭喜你已完成本实验</div>', unsafe_allow_html=True)
 
-def render_stage_6():
+# --- 7. 实验完成 ---
+elif curr_stage_name == "实验完成":
     st.balloons()
     st.header("🎉 实验已全部结束！")
     st.success("感谢参与，你可以关闭本页面了。")
-
-# ==========================================
-# 5. 主路由控制器
-# ==========================================
-def main():
-    stage = st.session_state.stage
-    if stage == 0:
-        render_stage_0()
-    elif stage == 1:
-        render_stage_1()
-    elif stage == 2:
-        render_stage_2()
-    elif stage == 3:
-        render_stage_3()
-    elif stage == 4:
-        render_stage_4()
-    elif stage == 5:
-        render_stage_5()
-    elif stage >= 6:
-        render_stage_6()
-
-if __name__ == "__main__":
-    main()
