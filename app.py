@@ -140,14 +140,21 @@ if st.session_state.stage == 0:
         </div>
     ''', unsafe_allow_html=True)
     
-    u_ai = st.selectbox("请选择您的 AI 分组类型", ["指导型AI", "支持型AI"])
+    # ✅ 修复1：将变量名改为 ai_choice 保持一致
+    ai_choice = st.selectbox("请选择您的 AI 分组类型", ["指导型AI", "支持型AI"])
     
     st.write("---")
     # 全局唯一的主动跳转按钮
     if st.button("开始"):
         if ai_choice:
+            # 记录选择的 AI 类型
             st.session_state.ai_type = ai_choice
-            st.session_state.stage = 2
+            
+            # ✅ 修复2：提前生成好指导语，存入 session_state，供阶段2使用
+            st.session_state.ai_instruction = get_ai_instruction(ai_choice, st.session_state.q_main)
+            
+            # ✅ 修复3：将阶段设置为 1（前测阶段），而不是直接跳到 2
+            st.session_state.stage = 1 
             st.rerun()
 
 # --- 阶段 1: 前测阶段 ---
