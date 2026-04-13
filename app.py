@@ -103,7 +103,6 @@ st.markdown("""
 if 'stage' not in st.session_state:
     st.session_state.stage = 0
     st.session_state.start_time = None
-    st.session_state.responses = {}
     st.session_state.q_main = random.choice(MAIN_QUESTION_BANK)
     st.session_state.q_transfer = random.choice(TRANSFER_QUESTION_BANK)
     st.session_state.ai_instruction = ""
@@ -150,85 +149,60 @@ curr_stage_name = STAGES[st.session_state.stage]
 # --- 1. 信息填写 (首页) ---
 if curr_stage_name == "信息填写":
     st.title("🧪 AI学习干预实验平台")
-    
     st.markdown('''
         <div class="instruction-box">
         💡 <b>操作指引：</b><br>
-        请在答题卡上填写自己的姓名、性别、学号、班级，并根据答题卡上已选的AI类型，勾选下方的对应选项，<b>选择后将自动进入实验</b>。
+        请在答题卡上填写个人信息，并根据答题卡分配的AI类型选择下方选项，完成后点击<b>“开始”</b>。
         </div>
     ''', unsafe_allow_html=True)
-    
-    st.markdown("**请选择您的 AI 分组类型：**")
-    
-    # 使用 checkbox 展现明面上的“小方框”
-    c1 = st.checkbox("指导型AI")
-    c2 = st.checkbox("支持型AI")
-    
-    # 一旦用户勾选任意一个，立刻保存信息并跳转到下一阶段
-    if c1:
-        st.session_state.user_info = {"ai_type": "指导型AI"}
-        st.session_state.ai_instruction = get_ai_instruction("指导型AI", st.session_state.q_main)
+    u_ai = st.selectbox("请选择您的 AI 分组类型", ["指导型AI", "支持型AI"])
+    if st.button("开始"):
+        st.session_state.user_info = {"ai_type": u_ai}
+        st.session_state.ai_instruction = get_ai_instruction(u_ai, st.session_state.q_main)
         next_stage()
-    elif c2:
-        st.session_state.user_info = {"ai_type": "支持型AI"}
-        st.session_state.ai_instruction = get_ai_instruction("支持型AI", st.session_state.q_main)
-        next_stage()
+
 # --- 2. 前测阶段 (4min) ---
 elif curr_stage_name == "前测阶段":
     st.header("第一阶段：前测自答")
     st.info(st.session_state.q_main['content'])
-    
-    st.markdown('<div class="warning-box">📝 请将自己的答案写在答题卡上，记得注意左侧剩余时间，倒计时结束将强制跳转进入下一阶段的测试。</div>', unsafe_allow_html=True)
-    
-    if st.button("下一步"): next_stage()
-    run_timer(4)
+    st.markdown('<div class="warning-box">📝 请将自己的答案写在答题卡上。倒计时结束将自动进入下一阶段。</div>', unsafe_allow_html=True)
+    run_timer(0.1)
 
 # --- 3. AI互动阶段 (5min) ---
 elif curr_stage_name == "AI互动":
     st.header("第二阶段：AI 互动辅助")
-    st.error("📢 重要提示：请将自己认为有用的答案在草稿纸上做好记录，方便下一阶段整理答案。并在倒计时结束之前返回实验页面。倒计时结束会强制跳转，且不可返回原页面。")
+    st.error("📢 请将有用的信息记在草稿纸上。倒计时结束会强制跳转。")
     st.code(st.session_state.ai_instruction, language=None)
-    st.link_button("🚀 先点击指令右侧复制内容，再点击此键跳转豆包 AI", "https://www.doubao.com/")
+    st.link_button("🚀 先复制上方指令，再点击跳转豆包 AI", "https://www.doubao.com/")
     st.divider()
-    if st.button("下一步"): next_stage()
-    run_timer(5)
+    run_timer(0.1)
 
 # --- 4. 后测阶段 (4min) ---
 elif curr_stage_name == "后测阶段":
     st.header("第三阶段：后测整理")
     st.info(st.session_state.q_main['content'])
-    
-    st.markdown('<div class="warning-box">📝 请将自己的答案写在答题卡上，记得注意左侧剩余时间，倒计时结束将强制跳转进入下一阶段的测试。</div>', unsafe_allow_html=True)
-    
-    if st.button("下一步"): next_stage()
-    run_timer(4)
+    st.markdown('<div class="warning-box">📝 请将整合后的答案写在答题卡上。倒计时结束将自动跳转。</div>', unsafe_allow_html=True)
+    run_timer(0.1)
 
 # --- 5. 迁移阶段 (4min) ---
 elif curr_stage_name == "迁移阶段":
     st.header("第四阶段：迁移能力测试")
     st.success(st.session_state.q_transfer['content'])
-    
-    st.markdown('<div class="warning-box">📝 请将自己的答案写在答题卡上，记得注意左侧剩余时间，倒计时结束将强制跳转进入下一阶段的测试。</div>', unsafe_allow_html=True)
-    
-    if st.button("下一步"): next_stage()
-    run_timer(4)
+    st.markdown('<div class="warning-box">📝 请将新问题的答案写在答题卡上。倒计时结束将自动跳转。</div>', unsafe_allow_html=True)
+    run_timer(0.1)
 
 # --- 6. 问卷阶段 ---
 elif curr_stage_name == "问卷阶段":
     st.header("第五阶段：反馈问卷")
-    
     st.markdown('''
         <div class="instruction-box" style="text-align: center; background-color: #e3f2fd; border-color: #2196f3;">
         📑 <b>请翻转答题卡至背面完成反馈问卷</b><br><br>
         <span style="font-size: 18px; color: #666;">完成后点击下方按钮结束实验</span>
         </div>
     ''', unsafe_allow_html=True)
-    
-    if st.button("下一步"):
+    if st.button("完成实验"):
         next_stage()
-    
-    # 右下角添加恭喜语
-    st.markdown('<div class="finish-text">恭喜你已完成本实验</div>', unsafe_allow_html=True)
+    st.markdown('<div class="finish-text">实验已完成，请等待老师指令</div>', unsafe_allow_html=True)
 
 # --- 7. 实验完成 ---
 elif curr_stage_name == "实验完成":
