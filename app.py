@@ -218,9 +218,7 @@ elif curr_stage_name == "问卷阶段":
     
     if st.button("下一步"):
         next_stage()
-    
-    # 右下角添加恭喜语
-    st.markdown('<div class="finish-text">恭喜你已完成本实验</div>', unsafe_allow_html=True)
+
 
 # --- 7. 实验完成 ---
 elif curr_stage_name == "实验完成":
