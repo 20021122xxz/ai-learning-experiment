@@ -3,7 +3,7 @@ import time
 import random
 
 # ==========================================
-# 1. 语料库
+# 1. 语料库 (保持不变)
 # ==========================================
 Q_A = {
     "id": "A",
@@ -61,7 +61,7 @@ TRANSFER_QUESTION_BANK = [Q_C, Q_D]
 # ==========================================
 st.set_page_config(page_title="AI学习干预实验平台", layout="centered")
 
-# 样式美化
+# 全局样式控制
 st.markdown("""
     <style>
     html, body, [class*="css"] { font-size: 20px !important; }
@@ -72,6 +72,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
+# 初始化状态
 if 'stage' not in st.session_state:
     st.session_state.stage = 0
     st.session_state.start_time = None
@@ -79,8 +80,7 @@ if 'stage' not in st.session_state:
     st.session_state.q_transfer = random.choice(TRANSFER_QUESTION_BANK)
     st.session_state.ai_instruction = ""
 
-STAGES = ["信息填写", "前测阶段", "AI互动", "后测阶段", "迁移阶段", "问卷阶段"]
-
+# 逻辑辅助函数
 def get_ai_instruction(ai_type, question_obj):
     content = question_obj['content']
     length = "字数要求400-500字。"
@@ -92,22 +92,19 @@ def get_ai_instruction(ai_type, question_obj):
 
 def next_stage():
     st.session_state.stage += 1
-    st.session_state.start_time = None
+    st.session_state.start_time = None  # 重置计时器
     st.rerun()
 
-# ==========================================
-# 3. 核心计时器
-# ==========================================
+# 核心计时器 (用于阶段 1-4)
 def run_timer(duration_min):
     total_sec = duration_min * 60
     if st.session_state.start_time is None:
         st.session_state.start_time = time.time()
+    
     elapsed = time.time() - st.session_state.start_time
     remaining = max(0, int(total_sec - elapsed))
     
     st.sidebar.metric("剩余时间", f"{remaining // 60:02d}:{remaining % 60:02d}")
-    if 0 < remaining <= 30:
-        st.sidebar.warning(f"⚠️ 注意：还剩 {remaining} 秒，即将自动跳转！")
     
     if remaining <= 0:
         next_stage()
@@ -116,62 +113,59 @@ def run_timer(duration_min):
     st.rerun()
 
 # ==========================================
-# 4. 实验流程 (使用 main_container 强制刷新内容)
+# 3. 实验流程 (严格单分支重写)
 # ==========================================
-main_placeholder = st.empty() # 创建一个空容器
-curr_stage_name = STAGES[st.session_state.stage]
 
-with main_placeholder.container(): # 所有内容都画在容器里
+# 阶段 0: 唯一存在按钮的页面
+if st.session_state.stage == 0:
+    st.title("🧪 AI学习干预实验平台")
+    st.markdown('<div class="instruction-box">💡 请填写基本信息并选择AI分组，点击下方的按钮开始。</div>', unsafe_allow_html=True)
     
-    # --- 阶段 1. 信息填写 ---
-    if curr_stage_name == "信息填写":
-        st.title("🧪 AI学习干预实验平台")
-        st.markdown('<div class="instruction-box">💡 请填写基本信息并选择AI分组，点击下方的按钮开始。</div>', unsafe_allow_html=True)
-        u_ai = st.selectbox("请选择您的 AI 分组类型", ["指导型AI", "支持型AI"])
-        
-    # ✅ 修复：严格缩进，仅当前阶段渲染按钮
+    u_ai = st.selectbox("请选择您的 AI 分组类型", ["指导型AI", "支持型AI"])
+    
+    # 只要点击了开始，程序会直接 rerun 杀掉这个逻辑块，进入下一页
     if st.button("开始"): 
         st.session_state.ai_instruction = get_ai_instruction(u_ai, st.session_state.q_main)
-        next_stage()  # 切换阶段
+        next_stage()
 
-    # --- 阶段 2. 前测阶段 ---
-    elif curr_stage_name == "前测阶段":
-        st.header("第一阶段：前测自答")
-        st.info(st.session_state.q_main['content'])
-        st.markdown('<div class="warning-box">📝 请在答题卡上作答。倒计时结束将自动进入下一环节。</div>', unsafe_allow_html=True)
-        run_timer(4)
+# 阶段 1: 前测 (完全无按钮代码)
+elif st.session_state.stage == 1:
+    st.header("第一阶段：前测自答")
+    st.info(st.session_state.q_main['content'])
+    st.markdown('<div class="warning-box">📝 请在答题卡上作答。倒计时结束将自动进入下一环节。</div>', unsafe_allow_html=True)
+    run_timer(4)
 
-    # --- 阶段 3. AI互动阶段 (无按钮) ---
-    elif curr_stage_name == "AI互动":
-        st.header("第二阶段：AI 互动辅助")
-        st.error("📢 请复制下方指令并在AI窗口进行互动，并在倒计时结束前回到本页面。")
-        st.code(st.session_state.ai_instruction, language=None)
-        st.link_button("🚀 跳转至豆包 AI", "https://www.doubao.com/")
-        st.markdown('<div class="warning-box">⏳ 倒计时结束将自动跳转，请注意左侧时间。</div>', unsafe_allow_html=True)
-        run_timer(5)
+# 阶段 2: AI 互动 (完全无按钮代码)
+elif st.session_state.stage == 2:
+    st.header("第二阶段：AI 互动辅助")
+    st.error("📢 请复制下方指令并在AI窗口进行互动，并在倒计时结束前回到本页面。")
+    st.code(st.session_state.ai_instruction, language=None)
+    st.link_button("🚀 跳转至豆包 AI", "https://www.doubao.com/")
+    st.markdown('<div class="warning-box">⏳ 请注意左侧时间，倒计时结束将自动跳转。</div>', unsafe_allow_html=True)
+    run_timer(5)
 
-    # --- 阶段 4. 后测阶段 (无按钮) ---
-    elif curr_stage_name == "后测阶段":
-        st.header("第三阶段：后测整理")
-        st.info(st.session_state.q_main['content'])
-        st.markdown('<div class="warning-box">📝 请在答题卡上整理最终答案。倒计时结束将自动跳转。</div>', unsafe_allow_html=True)
-        run_timer(4)
+# 阶段 3: 后测 (完全无按钮代码)
+elif st.session_state.stage == 3:
+    st.header("第三阶段：后测整理")
+    st.info(st.session_state.q_main['content'])
+    st.markdown('<div class="warning-box">📝 请在答题卡上整理最终答案。倒计时结束将自动跳转。</div>', unsafe_allow_html=True)
+    run_timer(4)
 
-    # --- 阶段 5. 迁移阶段 (无按钮) ---
-    elif curr_stage_name == "迁移阶段":
-        st.header("第四阶段：迁移能力测试")
-        st.success(st.session_state.q_transfer['content'])
-        st.markdown('<div class="warning-box">📝 请针对新问题在答题卡上作答。倒计时结束将自动跳转。</div>', unsafe_allow_html=True)
-        run_timer(4)
+# 阶段 4: 迁移测试 (完全无按钮代码)
+elif st.session_state.stage == 4:
+    st.header("第四阶段：迁移能力测试")
+    st.success(st.session_state.q_transfer['content'])
+    st.markdown('<div class="warning-box">📝 请针对新问题在答题卡上作答。倒计时结束将自动跳转。</div>', unsafe_allow_html=True)
+    run_timer(4)
 
-    # --- 阶段 6. 问卷阶段 (终点，无按钮) ---
-    elif curr_stage_name == "问卷阶段":
-        st.balloons()
-        st.header("🎉 实验已完成")
-        st.markdown('''
-            <div class="instruction-box" style="text-align: center; background-color: #e3f2fd; border-color: #2196f3;">
-            📑 <b>最后一步：请翻转答题卡至背面完成反馈问卷</b><br><br>
-            <span style="font-size: 22px; color: #28a745; font-weight: bold;">感谢参与！全部完成后，您现在可以关闭本页面。</span>
-            </div>
-        ''', unsafe_allow_html=True)
-        st.success("实验流程已结束。")
+# 阶段 5: 问卷阶段 (实验结束)
+elif st.session_state.stage == 5:
+    st.balloons()
+    st.header("🎉 实验已完成")
+    st.markdown('''
+        <div class="instruction-box" style="text-align: center; background-color: #e3f2fd; border-color: #2196f3;">
+        📑 <b>最后一步：请翻转答题卡至背面完成反馈问卷</b><br><br>
+        <span style="font-size: 22px; color: #28a745; font-weight: bold;">感谢参与！全部完成后，您现在可以关闭本页面。</span>
+        </div>
+    ''', unsafe_allow_html=True)
+    st.success("流程已全部结束。")
